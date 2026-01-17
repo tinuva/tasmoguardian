@@ -2,8 +2,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install Node.js for Reflex frontend build
-RUN apt-get update && apt-get install -y curl && \
+# Install Node.js and unzip for Reflex frontend build
+RUN apt-get update && apt-get install -y curl unzip && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
