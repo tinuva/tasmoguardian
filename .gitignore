@@ -1,0 +1,11 @@
+.states
+__pycache__/
+.web
+*.py[cod]
+assets/external/
+*.db
+.kiro/agents
+_bmad
+.old
+data/tasmobackupdb.sqlite3
+data/backups/*
