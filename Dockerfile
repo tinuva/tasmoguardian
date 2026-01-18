@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install Node.js and unzip for Reflex frontend build
+# Install Node.js, unzip, and build dependencies
 RUN apt-get update && apt-get install -y curl unzip && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
@@ -13,7 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN reflex init
+# Initialize and build frontend completely
+RUN reflex init && reflex export --frontend-only --no-zip
 
 EXPOSE 3000 8000
 
