@@ -1,6 +1,6 @@
 # Story 6.1: GitHub Actions Docker Build & Publish
 
-## Status: in-progress
+## Status: complete
 
 ## Epic
 Epic 6: CI/CD & Deployment
@@ -22,9 +22,9 @@ So that **I can pull and run the app on any Docker host for real-world testing**
 - [x] Image tagged with short SHA for traceability
 
 ### AC3: Docker Image Works
-- [ ] Image runs with `docker run -p 3000:3000 -p 8000:8000 -v ./data:/app/data ghcr.io/<owner>/tasmo-guardian:latest`
-- [ ] Data persists in mounted volume
-- [ ] App accessible on port 3000
+- [x] Image runs with `docker run -p 3000:3000 -p 8000:8000 -v ./data:/app/data ghcr.io/<owner>/tasmo-guardian:latest`
+- [x] Data persists in mounted volume
+- [x] App accessible on port 3000
 
 ## Technical Notes
 
@@ -85,7 +85,7 @@ Current Dockerfile may need adjustment for production:
 
 ## Definition of Done
 - [x] `.github/workflows/docker-publish.yml` created
-- [ ] Push to main triggers workflow
-- [ ] Image appears in GitHub Packages
-- [ ] `docker pull ghcr.io/<owner>/tasmo-guardian:latest` works
-- [ ] Container runs and serves app on port 3000
+- [x] Push to main triggers workflow
+- [x] Image appears in GitHub Packages
+- [x] `docker pull ghcr.io/<owner>/tasmo-guardian:latest` works
+- [x] Container runs and serves app on port 3000

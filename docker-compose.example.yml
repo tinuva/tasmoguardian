@@ -1,0 +1,15 @@
+# Simple docker-compose for TasmoGuardian (no reverse proxy)
+
+version: '3.8'
+services:
+  tasmoguardian:
+    image: ghcr.io/tinuva/tasmoguardian:latest
+    container_name: tasmoguardian
+    ports:
+      - "3000:3000"
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
