@@ -10,7 +10,7 @@ def import_button() -> rx.Component:
     return rx.upload(
         rx.button("Import CSV", variant="outline"),
         id="csv_import",
-        accept={".csv": ["text/csv"]},
+        accept={"text/csv": [".csv"], "application/vnd.ms-excel": [".csv"]},
         max_files=1,
         on_drop=DeviceState.handle_csv_import(rx.upload_files(upload_id="csv_import")),
         border="none",
