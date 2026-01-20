@@ -1,5 +1,6 @@
 # Simple docker-compose for TasmoGuardian
 # Just expose port 3000 - all routing handled internally by nginx
+# Backups run automatically every hour (configurable via BACKUP_SCHEDULE)
 
 version: '3.8'
 services:
@@ -12,4 +13,6 @@ services:
       - ./data:/app/data
     environment:
       - TZ=UTC
+      # Optional: customize backup schedule (default: hourly at minute 8)
+      # - BACKUP_SCHEDULE=0 2 * * *  # Example: daily at 2am
     restart: unless-stopped

@@ -213,8 +213,8 @@ epics:
   epic-6:
     name: "CI/CD & Deployment"
     status: in-progress
-    stories_total: 2
-    stories_done: 1
+    stories_total: 3
+    stories_done: 2
     frs: []
     nfrs: [NFR12]
     stories:
@@ -227,16 +227,21 @@ epics:
         status: complete
         blocked: false
         depends_on: [story-6.1]
+      story-6.3:
+        name: "Built-in Cron Scheduling"
+        status: not-started
+        blocked: false
+        depends_on: [story-6.2]
 
 # Progress Summary
 progress:
-  not-started: 0
+  not-started: 1
   in-progress: 0
   done: 34
   blocked: 0
 
 # Next recommended story
-next_story: null
+next_story: story-6.3
 
 # Sprint notes
 notes: |
