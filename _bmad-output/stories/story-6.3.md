@@ -1,6 +1,6 @@
 # Story 6.3: Built-in Cron Scheduling
 
-## Status: in-progress
+## Status: complete
 
 ## Epic
 Epic 6: CI/CD & Deployment

@@ -229,19 +229,19 @@ epics:
         depends_on: [story-6.1]
       story-6.3:
         name: "Built-in Cron Scheduling"
-        status: not-started
+        status: complete
         blocked: false
         depends_on: [story-6.2]
 
 # Progress Summary
 progress:
-  not-started: 1
+  not-started: 0
   in-progress: 0
-  done: 34
+  done: 35
   blocked: 0
 
 # Next recommended story
-next_story: story-6.3
+next_story: null
 
 # Sprint notes
 notes: |

@@ -43,9 +43,27 @@ async def download_backup_by_path(path: str):
 
 async def trigger_backup() -> dict:
     """Trigger backup of all devices. For use with external schedulers."""
+    from datetime import datetime, timedelta
+    from ..services.backup import backup_device, count_device_backups
+    
+    results = {"backed_up": 0, "skipped": 0, "failed": 0}
+    
     with db_session() as session:
         devices = session.query(Device).all()
-        results = await backup_all_devices(devices, min_hours=24)
+        cutoff = datetime.now() - timedelta(hours=24)
+        
+        for device in devices:
+            if device.lastbackup and device.lastbackup > cutoff:
+                results["skipped"] += 1
+                continue
+            
+            success = await backup_device(device)
+            if success:
+                device.lastbackup = datetime.now()
+                device.noofbackups = count_device_backups(device.name)
+                results["backed_up"] += 1
+            else:
+                results["failed"] += 1
 
     return {
         "status": "complete",
