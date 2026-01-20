@@ -1,4 +1,5 @@
-# Simple docker-compose for TasmoGuardian (no reverse proxy)
+# Simple docker-compose for TasmoGuardian
+# Just expose port 3000 - all routing handled internally by nginx
 
 version: '3.8'
 services:
@@ -7,7 +8,6 @@ services:
     container_name: tasmoguardian
     ports:
       - "3000:3000"
-      - "8000:8000"
     volumes:
       - ./data:/app/data
     environment:

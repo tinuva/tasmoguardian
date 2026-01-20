@@ -1,5 +1,5 @@
-# Example docker-compose for TasmoGuardian with Traefik reverse proxy
-# Adjust DOMAINNAME and paths as needed
+# Docker-compose for TasmoGuardian with Traefik reverse proxy
+# Use this if you have an existing Traefik setup
 
 version: '3.8'
 services:
@@ -9,19 +9,10 @@ services:
     volumes:
       - ./data:/app/data
     environment:
-      - TZ=Africa/Johannesburg
+      - TZ=UTC
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      # Frontend (static files on port 3000)
-      - "traefik.http.routers.tasmoguardian-secure.tls=true"
-      - "traefik.http.routers.tasmoguardian-secure.rule=Host(`tasmoguardian.${DOMAINNAME}`)"
-      - "traefik.http.routers.tasmoguardian-secure.service=tasmoguardian-frontend"
-      - "traefik.http.services.tasmoguardian-frontend.loadbalancer.server.port=3000"
-      # Backend (websocket + API + upload on port 8000)
-      - "traefik.http.routers.tasmoguardian-backend.tls=true"
-      - "traefik.http.routers.tasmoguardian-backend.rule=Host(`tasmoguardian.${DOMAINNAME}`) && (PathPrefix(`/_event`) || PathPrefix(`/api`) || PathPrefix(`/_upload`))"
-      - "traefik.http.routers.tasmoguardian-backend.service=tasmoguardian-backend"
-      - "traefik.http.services.tasmoguardian-backend.loadbalancer.server.port=8000"
-      # Watchtower auto-update (optional)
-      - com.centurylinklabs.watchtower.enable=true
+      - "traefik.http.routers.tasmoguardian.tls=true"
+      - "traefik.http.routers.tasmoguardian.rule=Host(`tasmoguardian.${DOMAINNAME}`)"
+      - "traefik.http.services.tasmoguardian.loadbalancer.server.port=3000"

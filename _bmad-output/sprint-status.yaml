@@ -213,25 +213,30 @@ epics:
   epic-6:
     name: "CI/CD & Deployment"
     status: in-progress
-    stories_total: 1
-    stories_done: 0
+    stories_total: 2
+    stories_done: 1
     frs: []
     nfrs: [NFR12]
     stories:
       story-6.1:
         name: "GitHub Actions Docker Build & Publish"
+        status: complete
+        blocked: false
+      story-6.2:
+        name: "Single-Port Docker with nginx"
         status: not-started
         blocked: false
+        depends_on: [story-6.1]
 
 # Progress Summary
 progress:
   not-started: 1
   in-progress: 0
-  done: 32
+  done: 33
   blocked: 0
 
 # Next recommended story
-next_story: story-6.1
+next_story: story-6.2
 
 # Sprint notes
 notes: |
