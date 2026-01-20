@@ -11,22 +11,19 @@ class BackupListState(rx.State):
     """State for backup list page."""
 
     backups: list[dict] = []
-    _device_name: str = ""
-    _device_id: int = 0
+    device_name: str = ""
+    device_id: str = ""
 
     def load_backups(self):
         """Load backups for current device from route params."""
-        self._device_name = getattr(self, "device_name", "")
-        self._device_id = int(getattr(self, "device_id", 0) or 0)
-        if self._device_name:
-            api_url = rx.config.get_config().api_url
+        if self.device_name:
             self.backups = [
                 {
                     **b,
                     "date": str(b["date"]),
-                    "download_url": f"{api_url}/api/backup/download?path={b['path']}",
+                    "download_url": f"/api/backup/download?path={b['path']}",
                 }
-                for b in get_backup_history(self._device_name)
+                for b in get_backup_history(self.device_name)
             ]
 
     def delete_backup_file(self, filepath: str):
@@ -34,9 +31,9 @@ class BackupListState(rx.State):
         delete_backup(filepath)
         
         # Update device noofbackups in database
-        if self._device_id:
+        if self.device_id:
             with db_session() as session:
-                device = session.query(Device).get(self._device_id)
+                device = session.query(Device).get(int(self.device_id))
                 if device:
                     device.noofbackups = count_device_backups(device.name)
         
