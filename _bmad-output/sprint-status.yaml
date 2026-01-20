@@ -224,19 +224,19 @@ epics:
         blocked: false
       story-6.2:
         name: "Single-Port Docker with nginx"
-        status: not-started
+        status: complete
         blocked: false
         depends_on: [story-6.1]
 
 # Progress Summary
 progress:
-  not-started: 1
+  not-started: 0
   in-progress: 0
-  done: 33
+  done: 34
   blocked: 0
 
 # Next recommended story
-next_story: story-6.2
+next_story: null
 
 # Sprint notes
 notes: |

@@ -1,6 +1,6 @@
 # Story 6.2: Single-Port Docker with nginx
 
-## Status: in-progress
+## Status: complete
 
 ## Epic
 Epic 6: CI/CD & Deployment
