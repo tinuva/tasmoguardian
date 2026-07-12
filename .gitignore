@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# M0 prototype artifacts (device backups)
+m0/.venv/
+m0/*.dmp
+m0/*.json
+m0/*.err
+
+# Node
+node_modules/
+frontend/dist/
+
+# Runtime data
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Editors
+.idea/
+.vscode/
