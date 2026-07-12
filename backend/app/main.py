@@ -9,8 +9,10 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .db import init_db
+from .decoder import shutdown as decoder_shutdown
 from .poller import poll_all_devices
-from .routers import devices
+from .retention import retention_sweep, scheduled_backup_all
+from .routers import backups, devices
 from .ws import hub
 
 logging.basicConfig(level=logging.INFO)
@@ -32,13 +34,33 @@ async def lifespan(_app: FastAPI):
     scheduler.start()
     # kick one poll immediately at startup
     scheduler.add_job(poll_all_devices, id="status_poll_boot")
+    scheduler.add_job(
+        scheduled_backup_all,
+        "cron",
+        hour=settings.backup_cron_hour,
+        minute=settings.backup_cron_minute,
+        id="scheduled_backups",
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        retention_sweep,
+        "cron",
+        hour=4,
+        minute=30,
+        id="retention_sweep",
+        max_instances=1,
+        coalesce=True,
+    )
     yield
     scheduler.shutdown(wait=False)
+    decoder_shutdown()
 
 
 app = FastAPI(title="TasmoManager", version="0.1.0", lifespan=lifespan)
 
 app.include_router(devices.router, prefix="/api/v1")
+app.include_router(backups.router, prefix="/api/v1")
 
 
 @app.get("/healthz")

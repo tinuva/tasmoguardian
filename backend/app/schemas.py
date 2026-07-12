@@ -46,3 +46,16 @@ class StateEventOut(BaseModel):
     ts: datetime
     kind: str
     detail: str | None
+
+
+class BackupOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    device_id: int
+    taken_at: datetime
+    dmp_sha256: str
+    config_hash: str
+    fw_version: str | None
+    size_bytes: int | None
+    trigger: str

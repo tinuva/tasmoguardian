@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './api'
 import { useWs } from './useWs'
+import { BackupsPanel } from './BackupsPanel'
 
 function timeAgo(iso: string | null): string {
   if (!iso) return 'never'
@@ -60,6 +61,7 @@ function AddDeviceForm() {
 export default function App() {
   useWs()
   const queryClient = useQueryClient()
+  const [expanded, setExpanded] = useState<number | null>(null)
   const { data: devices, isLoading, error } = useQuery({
     queryKey: ['devices'],
     queryFn: api.listDevices,
@@ -94,29 +96,42 @@ export default function App() {
           </thead>
           <tbody>
             {devices.map((d) => (
-              <tr key={d.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-2 pr-4">
-                  <span
-                    className={`inline-block w-2.5 h-2.5 rounded-full ${d.online ? 'bg-green-500' : 'bg-gray-400'}`}
-                    title={d.online ? 'online' : 'offline'}
-                  />
-                </td>
-                <td className="py-2 pr-4 font-medium">{d.name ?? d.topic ?? d.mac}</td>
-                <td className="py-2 pr-4 font-mono">{d.ip}</td>
-                <td className="py-2 pr-4">{d.fw_version ?? '—'}</td>
-                <td className="py-2 pr-4">{d.hardware ?? '—'}</td>
-                <td className="py-2 pr-4 text-gray-500">{timeAgo(d.last_seen_at)}</td>
-                <td className="py-2 text-right">
-                  <button
-                    className="text-red-600 hover:underline"
-                    onClick={() => {
-                      if (confirm(`Remove ${d.name ?? d.ip}?`)) del.mutate(d.id)
-                    }}
-                  >
-                    remove
-                  </button>
-                </td>
-              </tr>
+              <Fragment key={d.id}>
+                <tr
+                  className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setExpanded(expanded === d.id ? null : d.id)}
+                >
+                  <td className="py-2 pr-4">
+                    <span
+                      className={`inline-block w-2.5 h-2.5 rounded-full ${d.online ? 'bg-green-500' : 'bg-gray-400'}`}
+                      title={d.online ? 'online' : 'offline'}
+                    />
+                  </td>
+                  <td className="py-2 pr-4 font-medium">{d.name ?? d.topic ?? d.mac}</td>
+                  <td className="py-2 pr-4 font-mono">{d.ip}</td>
+                  <td className="py-2 pr-4">{d.fw_version ?? '—'}</td>
+                  <td className="py-2 pr-4">{d.hardware ?? '—'}</td>
+                  <td className="py-2 pr-4 text-gray-500">{timeAgo(d.last_seen_at)}</td>
+                  <td className="py-2 text-right">
+                    <button
+                      className="text-red-600 hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (confirm(`Remove ${d.name ?? d.ip}?`)) del.mutate(d.id)
+                      }}
+                    >
+                      remove
+                    </button>
+                  </td>
+                </tr>
+                {expanded === d.id && (
+                  <tr>
+                    <td colSpan={7}>
+                      <BackupsPanel deviceId={d.id} deviceName={d.name ?? d.ip} />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
             {devices.length === 0 && (
               <tr>

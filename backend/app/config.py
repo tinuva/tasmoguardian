@@ -15,6 +15,13 @@ class Settings(BaseSettings):
     # reachable from the device LAN. Empty -> derived from request host.
     ota_base_url: str = ""
     mqtt_broker_url: str = ""
+    # Backup schedule (cron, local time) and retention policy
+    backup_cron_hour: int = 3
+    backup_cron_minute: int = 15
+    retention_keep_last: int = 10
+    retention_keep_monthly: int = 12
+    retention_pre_update_days: int = 30
+    retention_events_days: int = 90
 
     @property
     def db_path(self) -> Path:
