@@ -12,6 +12,7 @@ dependencies = [
     "apscheduler>=3.10,<4",
     "pydantic-settings>=2.0",
     "decode-config==15.5.0.0",
+    "aiomqtt>=2.0",
 ]
 
 [project.optional-dependencies]

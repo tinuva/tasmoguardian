@@ -64,8 +64,11 @@ def firmware_filename(fw_variant: str | None, hardware: str | None, minimal: boo
         if minimal:
             # ESP32 has no minimal two-step; safeboot handles it device-side
             raise FirmwareError("ESP32 does not use minimal firmware")
+        # variants seen in the wild: "tasmota32", "solo1", "tasmota32solo1"
         if not variant.startswith("tasmota32"):
-            variant = "tasmota32"
+            variant = f"tasmota32{variant}" if variant not in ("tasmota", "") else "tasmota32"
+        if not re.fullmatch(r"tasmota32[A-Za-z0-9-]*", variant):
+            raise FirmwareError(f"unrecognized ESP32 firmware variant: {fw_variant!r}")
         return f"{variant}.bin"
     if minimal:
         return "tasmota-minimal.bin.gz"

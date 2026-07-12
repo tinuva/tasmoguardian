@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type Backup, type DiffEntry } from './api'
+import { EventTimeline } from './EventTimeline'
 
 function fmtDate(iso: string): string {
   return new Date(iso + 'Z').toLocaleString()
@@ -172,6 +173,8 @@ export function BackupsPanel({ deviceId, deviceName }: { deviceId: number; devic
       {diffPair && (
         <DiffView backupId={diffPair.b} against={diffPair.a} onClose={() => setDiffPair(null)} />
       )}
+
+      <EventTimeline deviceId={deviceId} />
     </div>
   )
 }

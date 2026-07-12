@@ -4,6 +4,7 @@ import { api } from './api'
 import { useWs } from './useWs'
 import { BackupsPanel } from './BackupsPanel'
 import { UpdatesPanel } from './UpdatesPanel'
+import { SettingsPanel } from './SettingsPanel'
 
 function timeAgo(iso: string | null): string {
   if (!iso) return 'never'
@@ -68,11 +69,52 @@ function AddDeviceForm() {
   )
 }
 
+function ScanButton() {
+  const queryClient = useQueryClient()
+  const [progress, setProgress] = useState<string | null>(null)
+  const scan = useMutation({
+    mutationFn: (cidr: string) => api.startScan(cidr),
+    onSuccess: () => {
+      setProgress('scanning…')
+      const poll = setInterval(async () => {
+        try {
+          const s = await api.scanStatus()
+          setProgress(`${s.done}/${s.total} probed, ${s.found.length} found`)
+          if (s.finished) {
+            clearInterval(poll)
+            setTimeout(() => setProgress(null), 5000)
+            queryClient.invalidateQueries({ queryKey: ['devices'] })
+          }
+        } catch {
+          clearInterval(poll)
+        }
+      }, 1500)
+    },
+    onError: (e) => setProgress((e as Error).message),
+  })
+
+  return (
+    <span className="flex items-center gap-2">
+      <button
+        className="border border-gray-300 rounded px-3 py-1 text-sm hover:bg-gray-50"
+        onClick={() => {
+          const cidr = prompt('Subnet to scan (CIDR):', '10.0.22.0/24')
+          if (cidr) scan.mutate(cidr)
+        }}
+      >
+        Scan subnet
+      </button>
+      {progress && <span className="text-xs text-gray-500">{progress}</span>}
+    </span>
+  )
+}
+
 export default function App() {
   useWs()
   const queryClient = useQueryClient()
   const [expanded, setExpanded] = useState<number | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [showSettings, setShowSettings] = useState(false)
   const { data: devices, isLoading, error } = useQuery({
     queryKey: ['devices'],
     queryFn: api.listDevices,
@@ -106,8 +148,19 @@ export default function App() {
     <div className="max-w-5xl mx-auto p-6">
       <header className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">TasmoManager</h1>
-        <AddDeviceForm />
+        <div className="flex items-center gap-3">
+          <ScanButton />
+          <button
+            className="border border-gray-300 rounded px-3 py-1 text-sm hover:bg-gray-50"
+            onClick={() => setShowSettings(!showSettings)}
+          >
+            Settings
+          </button>
+          <AddDeviceForm />
+        </div>
       </header>
+
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
       {selected.size > 0 && (
         <div className="flex items-center gap-3 mb-3 p-2 bg-blue-50 border border-blue-200 rounded">

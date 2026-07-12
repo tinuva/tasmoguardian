@@ -3,15 +3,41 @@ import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
 from ..models import Device, StateEvent
+from ..scanner import ScanError, scan_status, start_scan
 from ..schemas import CommandIn, DeviceCreate, DeviceOut, DevicePatch, StateEventOut
 from ..tasmota import DeviceCommandError, DeviceUnreachable, command, extract_identity, status0
 
 router = APIRouter(prefix="/devices", tags=["devices"])
+
+
+class ScanIn(BaseModel):
+    cidr: str
+
+
+@router.post("/scan", status_code=202)
+async def scan_subnet(body: ScanIn):
+    """Probe a CIDR for Tasmota devices; progress via WS scan_progress."""
+    try:
+        scan_id = start_scan(body.cidr)
+    except ValueError as exc:
+        raise HTTPException(422, f"invalid CIDR: {exc}") from exc
+    except ScanError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {"scan_id": scan_id}
+
+
+@router.get("/scan")
+async def get_scan_status():
+    status = scan_status()
+    if status is None:
+        raise HTTPException(404, "no scan has been run")
+    return status
 
 
 @router.get("", response_model=list[DeviceOut])

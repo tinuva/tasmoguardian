@@ -10,9 +10,12 @@ from fastapi.staticfiles import StaticFiles
 from .config import settings
 from .db import init_db
 from .decoder import shutdown as decoder_shutdown
+from . import mqtt
 from .poller import poll_all_devices
 from .retention import retention_sweep, scheduled_backup_all
 from .routers import backups, devices, updates
+from .routers.settings_api import load_overrides
+from .routers import settings_api
 from .updater import fail_interrupted_jobs
 from .ws import hub
 
@@ -24,6 +27,8 @@ scheduler = AsyncIOScheduler()
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     await init_db()
+    # apply DB-stored setting overrides before scheduling anything
+    await load_overrides()
     # mark update rows interrupted by a previous shutdown as failed
     await fail_interrupted_jobs()
     scheduler.add_job(
@@ -55,7 +60,9 @@ async def lifespan(_app: FastAPI):
         max_instances=1,
         coalesce=True,
     )
+    mqtt.start()
     yield
+    await mqtt.stop()
     scheduler.shutdown(wait=False)
     decoder_shutdown()
 
@@ -65,6 +72,7 @@ app = FastAPI(title="TasmoManager", version="0.1.0", lifespan=lifespan)
 app.include_router(devices.router, prefix="/api/v1")
 app.include_router(backups.router, prefix="/api/v1")
 app.include_router(updates.router, prefix="/api/v1")
+app.include_router(settings_api.router, prefix="/api/v1")
 
 
 @app.get("/healthz")

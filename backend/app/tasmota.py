@@ -72,10 +72,17 @@ def extract_identity(status: dict[str, Any]) -> dict[str, Any]:
     st = status.get("Status", {})
     net = status.get("StatusNET", {})
     fwr = status.get("StatusFWR", {})
-    version = fwr.get("Version", "")  # e.g. "13.4.0(tasmota)"
+    version = fwr.get("Version", "")  # e.g. "13.4.0(tasmota)", "12.5.0(solo1)single-core"
     variant = None
-    if "(" in version and version.endswith(")"):
-        variant = version[version.index("(") + 1 : -1]
+    if "(" in version:
+        after = version[version.index("(") + 1 :]
+        if ")" in after:
+            variant = after[: after.index(")")]
+            # normalize release channel prefix: "release-solo1" -> "solo1"
+            if variant.startswith("release-"):
+                variant = variant[len("release-"):] or "tasmota"
+            if variant == "release":
+                variant = "tasmota"
     friendly = st.get("FriendlyName")
     return {
         "mac": net.get("Mac"),

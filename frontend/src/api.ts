@@ -66,6 +66,26 @@ export interface UpdateJob {
   devices: UpdateJobDevice[]
 }
 
+export interface StateEvent {
+  id: number
+  device_id: number
+  ts: string
+  kind: string
+  detail: string | null
+}
+
+export interface AppSettings {
+  poll_interval_s: number
+  ota_base_url: string
+  mqtt_broker_url: string
+  backup_cron_hour: number
+  backup_cron_minute: number
+  retention_keep_last: number
+  retention_keep_monthly: number
+  retention_pre_update_days: number
+  retention_events_days: number
+}
+
 const API = '/api/v1'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -110,4 +130,16 @@ export const api = {
   getUpdate: (jobId: number) => request<UpdateJob>(`/updates/${jobId}`),
   cancelUpdate: (jobId: number) =>
     request<{ status: string }>(`/updates/${jobId}/cancel`, { method: 'POST' }),
+  deviceEvents: (deviceId: number, limit = 50) =>
+    request<StateEvent[]>(`/devices/${deviceId}/events?limit=${limit}`),
+  startScan: (cidr: string) =>
+    request<{ scan_id: string }>('/devices/scan', { method: 'POST', body: JSON.stringify({ cidr }) }),
+  scanStatus: () =>
+    request<{ scan_id: string; done: number; total: number; found: number[]; finished: boolean }>(
+      '/devices/scan',
+    ),
+  getSettings: () =>
+    request<{ values: AppSettings; descriptions: Record<string, string> }>('/settings'),
+  putSettings: (patch: Partial<AppSettings>) =>
+    request<{ values: AppSettings }>('/settings', { method: 'PUT', body: JSON.stringify(patch) }),
 }
