@@ -44,6 +44,28 @@ export interface DiffResult {
   entries: DiffEntry[]
 }
 
+export interface UpdateJobDevice {
+  id: number
+  job_id: number
+  device_id: number
+  state: string
+  from_version: string | null
+  to_version: string | null
+  error: string | null
+  log: string
+  started_at: string | null
+  finished_at: string | null
+}
+
+export interface UpdateJob {
+  id: number
+  created_at: string
+  channel: string
+  target_version: string | null
+  status: string
+  devices: UpdateJobDevice[]
+}
+
 const API = '/api/v1'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -81,4 +103,11 @@ export const api = {
       method: 'POST',
     }),
   deleteBackup: (backupId: number) => request<void>(`/backups/${backupId}`, { method: 'DELETE' }),
+  latestRelease: () => request<{ latest: string }>('/firmware/releases'),
+  createUpdate: (device_ids: number[]) =>
+    request<UpdateJob>('/updates', { method: 'POST', body: JSON.stringify({ device_ids }) }),
+  listUpdates: () => request<UpdateJob[]>('/updates'),
+  getUpdate: (jobId: number) => request<UpdateJob>(`/updates/${jobId}`),
+  cancelUpdate: (jobId: number) =>
+    request<{ status: string }>(`/updates/${jobId}/cancel`, { method: 'POST' }),
 }

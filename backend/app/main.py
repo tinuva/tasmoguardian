@@ -12,7 +12,8 @@ from .db import init_db
 from .decoder import shutdown as decoder_shutdown
 from .poller import poll_all_devices
 from .retention import retention_sweep, scheduled_backup_all
-from .routers import backups, devices
+from .routers import backups, devices, updates
+from .updater import fail_interrupted_jobs
 from .ws import hub
 
 logging.basicConfig(level=logging.INFO)
@@ -23,6 +24,8 @@ scheduler = AsyncIOScheduler()
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     await init_db()
+    # mark update rows interrupted by a previous shutdown as failed
+    await fail_interrupted_jobs()
     scheduler.add_job(
         poll_all_devices,
         "interval",
@@ -61,11 +64,18 @@ app = FastAPI(title="TasmoManager", version="0.1.0", lifespan=lifespan)
 
 app.include_router(devices.router, prefix="/api/v1")
 app.include_router(backups.router, prefix="/api/v1")
+app.include_router(updates.router, prefix="/api/v1")
 
 
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok"}
+
+
+# Firmware serving FOR DEVICES — must remain plain-HTTP reachable from the
+# device LAN even if the app sits behind a TLS proxy (see README).
+settings.firmware_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/ota", StaticFiles(directory=settings.firmware_dir), name="ota")
 
 
 @app.websocket("/ws")

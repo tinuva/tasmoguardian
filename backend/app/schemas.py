@@ -59,3 +59,29 @@ class BackupOut(BaseModel):
     fw_version: str | None
     size_bytes: int | None
     trigger: str
+
+
+class UpdateJobDeviceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    job_id: int
+    device_id: int
+    state: str
+    from_version: str | None
+    to_version: str | None
+    error: str | None
+    log: str
+    started_at: datetime | None
+    finished_at: datetime | None
+
+
+class UpdateJobOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_at: datetime
+    channel: str
+    target_version: str | None
+    status: str
+    devices: list[UpdateJobDeviceOut] = []
