@@ -34,6 +34,7 @@ from .firmware import (
     mirror_firmware,
     ota_url_for,
 )
+from .migration import Hop, MigrationError, plan_hops
 from .models import Device, UpdateJob, UpdateJobDevice
 from .tasmota import DeviceCommandError, DeviceUnreachable, command
 from .ws import hub
@@ -159,16 +160,37 @@ async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -
         await _set_state(row_id, "skipped", log_line=f"already on {current}")
         return "skipped"
 
-    # mirror binaries first (fail before touching the device)
+    # ---- plan the migration path (ESP8266 stepping stones per
+    # tasmota.github.io/docs/Upgrading; ESP32 goes direct) ----
     try:
-        full_file = firmware_filename(variant, hardware, minimal=False)
-        await mirror_firmware(full_file)
-        full_url = ota_url_for(full_file)
-        minimal_url = None
-        if not esp32:
-            minimal_file = firmware_filename(variant, hardware, minimal=True)
-            await mirror_firmware(minimal_file)
-            minimal_url = ota_url_for(minimal_file)
+        final_full = firmware_filename(variant, hardware, minimal=False)
+        final_minimal = None if esp32 else firmware_filename(variant, hardware, minimal=True)
+        if esp32:
+            hops = [Hop(label="target", full_path=final_full, minimal_path=None, final=True)]
+        else:
+            hops = plan_hops(current, final_full, final_minimal)
+    except MigrationError as exc:
+        await _set_state(row_id, "failed", error=str(exc))
+        return "failed"
+    except FirmwareError as exc:
+        await _set_state(row_id, "failed", error=str(exc))
+        return "failed"
+
+    if len(hops) > 1:
+        path_desc = " -> ".join(h.label for h in hops)
+        await _set_state(
+            row_id, "precheck",
+            log_line=f"migration path required from {current}: {path_desc}",
+        )
+
+    # mirror ALL binaries for the whole path first (fail before touching
+    # the device — never strand a device mid-ladder on a mirror error)
+    try:
+        for hop in hops:
+            await mirror_firmware(hop.full_path)
+            if hop.minimal_path is not None:
+                await mirror_firmware(hop.minimal_path)
+        full_url = ota_url_for(hops[-1].full_path)
     except FirmwareError as exc:
         await _set_state(row_id, "failed", error=str(exc))
         return "failed"
@@ -211,58 +233,70 @@ async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -
         await _set_state(row_id, "failed", error="job cancelled")
         return "failed"
 
-    # ---- flash minimal (ESP8266 only) ----
-    if not esp32:
-        await _set_state(row_id, "flash_minimal", log_line=f"OtaUrl {minimal_url}")
+    # ---- walk the ladder: for each hop, (minimal ->) full -> verify ----
+    target_norm = _norm_version(target_version)
+    for hop_no, hop in enumerate(hops, start=1):
+        hop_tag = f"hop {hop_no}/{len(hops)} ({hop.label})" if len(hops) > 1 else ""
+
+        # -- flash minimal (ESP8266 only; era-matched build) --
+        if hop.minimal_path is not None:
+            minimal_url = ota_url_for(hop.minimal_path)
+            await _set_state(row_id, "flash_minimal", log_line=f"{hop_tag} OtaUrl {minimal_url}".strip())
+            try:
+                await command(ip, f"OtaUrl {minimal_url}", password)
+                await command(ip, "Upgrade 1", password)
+            except (DeviceUnreachable, DeviceCommandError) as exc:
+                await _set_state(row_id, "failed", error=f"{hop_tag} flash_minimal command failed: {exc}")
+                return "failed"
+
+            await _set_state(row_id, "await_minimal")
+            try:
+                version = await _await_version(ip, password, _is_minimal, AWAIT_MINIMAL_TIMEOUT_S)
+                await _set_state(
+                    row_id, "await_minimal",
+                    log_line=f"{hop_tag} minimal running: {'detected via Command:Unknown' if version == MINIMAL_SENTINEL else version}".strip(),
+                )
+            except TimeoutError as exc:
+                await _set_state(row_id, "failed", error=f"{hop_tag} await_minimal: {exc}")
+                return "failed"
+
+        # -- flash full --
+        hop_url = ota_url_for(hop.full_path)
+        await _set_state(row_id, "flash_full", log_line=f"{hop_tag} OtaUrl {hop_url}".strip())
         try:
-            await command(ip, f"OtaUrl {minimal_url}", password)
+            await command(ip, f"OtaUrl {hop_url}", password)
             await command(ip, "Upgrade 1", password)
         except (DeviceUnreachable, DeviceCommandError) as exc:
-            await _set_state(row_id, "failed", error=f"flash_minimal command failed: {exc}")
+            await _set_state(row_id, "failed", error=f"{hop_tag} flash_full command failed: {exc}")
             return "failed"
 
-        await _set_state(row_id, "await_minimal")
-        try:
-            version = await _await_version(
-                ip, password, _is_minimal, AWAIT_MINIMAL_TIMEOUT_S
-            )
-            await _set_state(
-                row_id, "await_minimal",
-                log_line=f"minimal running: {'detected via Command:Unknown' if version == MINIMAL_SENTINEL else version}",
-            )
-        except TimeoutError as exc:
-            await _set_state(row_id, "failed", error=f"await_minimal: {exc}")
-            return "failed"
-
-    # ---- flash full ----
-    await _set_state(row_id, "flash_full", log_line=f"OtaUrl {full_url}")
-    try:
-        await command(ip, f"OtaUrl {full_url}", password)
-        await command(ip, "Upgrade 1", password)
-    except (DeviceUnreachable, DeviceCommandError) as exc:
-        await _set_state(row_id, "failed", error=f"flash_full command failed: {exc}")
-        return "failed"
-
-    # ---- await full + verify ----
-    await _set_state(row_id, "await_full")
-    target_norm = _norm_version(target_version)
-    try:
-        version = await _await_version(
-            ip, password,
-            lambda v: not _is_minimal(v) and _norm_version(v) == target_norm,
-            AWAIT_FULL_TIMEOUT_S,
-        )
-    except TimeoutError as exc:
-        # distinguish: stuck on minimal / back on old version / gone
-        last = await _poll_version(ip, password)
-        if last and _is_minimal(last):
-            error = "device stuck on minimal firmware; manual recovery needed"
-        elif last:
-            error = f"device rebooted but reports {last}, expected {target_version}"
+        # -- await + verify this hop --
+        await _set_state(row_id, "await_full")
+        if hop.final:
+            predicate = lambda v: not _is_minimal(v) and _norm_version(v) == target_norm  # noqa: E731
+            expect = target_version
         else:
-            error = str(exc)
-        await _set_state(row_id, "failed", error=error)
-        return "failed"
+            hop_norm = _norm_version(hop.label)
+            predicate = lambda v: not _is_minimal(v) and _norm_version(v) == hop_norm  # noqa: E731
+            expect = hop.label
+        try:
+            version = await _await_version(ip, password, predicate, AWAIT_FULL_TIMEOUT_S)
+            if not hop.final:
+                await _set_state(
+                    row_id, "flash_full",
+                    log_line=f"{hop_tag} verified on {version}; continuing ladder",
+                )
+        except TimeoutError as exc:
+            # distinguish: stuck on minimal / wrong version / gone
+            last = await _poll_version(ip, password)
+            if last and _is_minimal(last):
+                error = f"{hop_tag} device stuck on minimal firmware; manual recovery needed"
+            elif last:
+                error = f"{hop_tag} device rebooted but reports {last}, expected {expect}"
+            else:
+                error = f"{hop_tag} {exc}"
+            await _set_state(row_id, "failed", error=error.strip())
+            return "failed"
 
     await _set_state(row_id, "verify", log_line=f"device reports {version}")
     async with SessionLocal() as session:

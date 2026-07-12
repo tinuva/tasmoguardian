@@ -15,6 +15,9 @@ from ..updater import cancel_job, run_update_job
 router = APIRouter(tags=["updates"])
 
 _job_tasks: set[asyncio.Task] = set()
+# Serialize job creation: two simultaneous POSTs could otherwise both
+# pass the active-device check before either commits (observed live).
+_create_lock = asyncio.Lock()
 
 
 class UpdateCreate(BaseModel):
@@ -41,38 +44,39 @@ async def create_update(body: UpdateCreate, session: AsyncSession = Depends(get_
     if body.channel == "custom_url":
         raise HTTPException(501, "custom_url channel not implemented yet")
 
-    devices = (
-        (await session.execute(select(Device).where(Device.id.in_(body.device_ids))))
-        .scalars()
-        .all()
-    )
-    if len(devices) != len(set(body.device_ids)):
-        raise HTTPException(404, "one or more devices not found")
+    async with _create_lock:
+        devices = (
+            (await session.execute(select(Device).where(Device.id.in_(body.device_ids))))
+            .scalars()
+            .all()
+        )
+        if len(devices) != len(set(body.device_ids)):
+            raise HTTPException(404, "one or more devices not found")
 
-    # refuse devices already in an active job
-    active = (
-        await session.execute(
-            select(UpdateJobDevice.device_id).where(
-                UpdateJobDevice.device_id.in_(body.device_ids),
-                UpdateJobDevice.state.in_(
-                    ("queued", "precheck", "backup", "flash_minimal",
-                     "await_minimal", "flash_full", "await_full", "verify")
-                ),
+        # refuse devices already in an active job
+        active = (
+            await session.execute(
+                select(UpdateJobDevice.device_id).where(
+                    UpdateJobDevice.device_id.in_(body.device_ids),
+                    UpdateJobDevice.state.in_(
+                        ("queued", "precheck", "backup", "flash_minimal",
+                         "await_minimal", "flash_full", "await_full", "verify")
+                    ),
+                )
             )
-        )
-    ).scalars().all()
-    if active:
-        raise HTTPException(409, f"devices already in an active update job: {sorted(set(active))}")
+        ).scalars().all()
+        if active:
+            raise HTTPException(409, f"devices already in an active update job: {sorted(set(active))}")
 
-    job = UpdateJob(channel=body.channel, status="running")
-    session.add(job)
-    await session.flush()
-    for device in devices:
-        session.add(
-            UpdateJobDevice(job_id=job.id, device_id=device.id, from_version=device.fw_version)
-        )
-    await session.commit()
-    await session.refresh(job, attribute_names=["devices"])
+        job = UpdateJob(channel=body.channel, status="running")
+        session.add(job)
+        await session.flush()
+        for device in devices:
+            session.add(
+                UpdateJobDevice(job_id=job.id, device_id=device.id, from_version=device.fw_version)
+            )
+        await session.commit()
+        await session.refresh(job, attribute_names=["devices"])
 
     task = asyncio.create_task(run_update_job(job.id))
     _job_tasks.add(task)

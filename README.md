@@ -52,6 +52,31 @@ How TasmoManager addresses this:
 - Success is confirmed by reading the firmware version after reboot,
   never by a fixed timer.
 
+## Migration path (old firmware)
+
+Tasmota requires stepping through intermediate releases when upgrading
+old firmware (see the
+[official upgrade flow](https://tasmota.github.io/docs/Upgrading/#upgrade-flow)):
+
+```
+v5.14.0 -> v6.7.1 -> v7.2.0 -> v8.5.1 -> v9.1 -> current release
+```
+
+The update engine plans this ladder automatically from the device's
+current version (`backend/app/migration.py`):
+
+- Each required stepping stone is flashed in order (minimal + full per
+  hop on ESP8266, era-matched binaries: plain `.bin` before 9.1 since
+  gzip OTA needs >= 8.2 on the device, `sonoff-*.bin` names for 6.x).
+- Every hop is **version-verified** before the next one starts; a failed
+  hop stops the ladder with a precise error rather than stranding the
+  device further along.
+- All binaries for the whole path are mirrored to the volume *before*
+  the first flash — a mirror failure can't strand a device mid-ladder.
+- Firmware older than v5.14.0 is refused (OTA migration unsupported
+  upstream; reflash via serial).
+- ESP32 devices skip the ladder entirely (tasmota32 + safeboot).
+
 ## Development
 
 Backend (Python 3.12+, FastAPI):

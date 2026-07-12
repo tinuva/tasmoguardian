@@ -77,30 +77,44 @@ def firmware_filename(fw_variant: str | None, hardware: str | None, minimal: boo
     return f"{variant}.bin.gz"
 
 
-def _upstream_url(filename: str) -> str:
-    if filename.startswith("tasmota32"):
-        return f"{OTA32_UPSTREAM}/{filename}"
-    return f"{OTA_UPSTREAM}/{filename}"
+def _upstream_url(path: str) -> str:
+    """Map a mirror-relative path to its ota.tasmota.com URL.
+
+    Plain filenames come from the current release dirs; paths with a
+    subdirectory (e.g. 'release-7.2.0/tasmota-lite.bin') come from the
+    versioned tasmota tree (migration stepping stones, ESP8266 only).
+    """
+    if "/" in path:
+        return f"http://ota.tasmota.com/tasmota/{path}"
+    if path.startswith("tasmota32"):
+        return f"{OTA32_UPSTREAM}/{path}"
+    return f"{OTA_UPSTREAM}/{path}"
 
 
-def upstream_url_for(filename: str) -> str:
+def upstream_url_for(path: str) -> str:
     """Public ota.tasmota.com URL for a firmware file (device fallback)."""
-    return _upstream_url(filename)
+    return _upstream_url(path)
 
 
-async def mirror_firmware(filename: str) -> None:
+_PATH_RE = r"(?:release-[0-9.]+/)?[A-Za-z0-9._-]+"
+
+
+async def mirror_firmware(path: str) -> None:
     """Download a firmware binary from ota.tasmota.com to the volume.
 
-    Idempotent; concurrent calls for the same file are serialized.
+    `path` is relative to the mirror root and may include one
+    release-x.y.z/ subdirectory. Idempotent; concurrent calls for the
+    same file are serialized.
     """
-    if not re.fullmatch(r"[A-Za-z0-9._-]+", filename):
-        raise FirmwareError(f"invalid firmware filename: {filename!r}")
-    dest = settings.firmware_dir / filename
-    lock = _mirror_locks.setdefault(filename, asyncio.Lock())
+    if not re.fullmatch(_PATH_RE, path):
+        raise FirmwareError(f"invalid firmware path: {path!r}")
+    dest = settings.firmware_dir / path
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    lock = _mirror_locks.setdefault(path, asyncio.Lock())
     async with lock:
         if dest.is_file() and dest.stat().st_size > 0:
             return
-        url = _upstream_url(filename)
+        url = _upstream_url(path)
         tmp = dest.with_suffix(dest.suffix + ".part")
         try:
             async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
@@ -116,10 +130,10 @@ async def mirror_firmware(filename: str) -> None:
         except httpx.HTTPError as exc:
             tmp.unlink(missing_ok=True)
             raise FirmwareError(f"mirror failed for {url}: {exc}") from exc
-        log.info("mirrored %s (%d bytes)", filename, dest.stat().st_size)
+        log.info("mirrored %s (%d bytes)", path, dest.stat().st_size)
 
 
-def ota_url_for(filename: str) -> str:
+def ota_url_for(path: str) -> str:
     """Advertised URL a device should fetch this file from."""
     base = settings.ota_base_url.rstrip("/")
     if not base:
@@ -127,4 +141,4 @@ def ota_url_for(filename: str) -> str:
             "TM_OTA_BASE_URL is not set. It must be a plain-HTTP URL reachable "
             "from the device LAN (see README: The Tasmota OTA URL problem)."
         )
-    return f"{base}/{filename}"
+    return f"{base}/{path}"
