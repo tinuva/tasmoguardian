@@ -85,6 +85,30 @@ async def _set_state(
 MINIMAL_SENTINEL = "__minimal__"
 
 
+async def _poll_fwr(ip: str, web_password: str | None) -> dict | None:
+    """Single Status 2 poll returning the full StatusFWR dict, or None."""
+    try:
+        data = await command(ip, "Status 2", web_password, timeout=4.0)
+    except (DeviceUnreachable, DeviceCommandError):
+        return None
+    return data.get("StatusFWR") or None
+
+
+def _variant_from_version(version: str) -> str | None:
+    """'15.5.0(release-solo1)single-core' -> 'solo1'; '13.4.0(tasmota)' -> 'tasmota'."""
+    if "(" not in version:
+        return None
+    after = version[version.index("(") + 1 :]
+    if ")" not in after:
+        return None
+    variant = after[: after.index(")")]
+    if variant.startswith("release-"):
+        variant = variant[len("release-"):] or "tasmota"
+    if variant == "release":
+        variant = "tasmota"
+    return variant or None
+
+
 async def _poll_version(ip: str, web_password: str | None) -> str | None:
     """Single Status 2 poll.
 
@@ -142,14 +166,31 @@ async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -
         hardware, variant = device.hardware, device.fw_variant
         device_id = device.id
 
-    esp32 = is_esp32(hardware)
-
     # ---- precheck ----
+    # Identity (hardware/variant) is re-read LIVE from the device here —
+    # never trusted from the DB row — so the binary choice can't go stale
+    # or cross wires between devices in a mixed-chip batch.
     await _set_state(row_id, "precheck")
-    current = await _poll_version(ip, password)
-    if current is None:
+    fwr = await _poll_fwr(ip, password)
+    if fwr is None:
         await _set_state(row_id, "failed", error="device offline at precheck")
         return "failed"
+    current = fwr.get("Version")
+    if not current:
+        await _set_state(row_id, "failed", error="device did not report a firmware version at precheck")
+        return "failed"
+    live_hardware = fwr.get("Hardware")
+    live_variant = _variant_from_version(current)
+    if live_hardware and hardware and is_esp32(live_hardware) != is_esp32(hardware):
+        await _set_state(
+            row_id, "failed",
+            error=f"hardware mismatch: DB says {hardware!r} but device reports "
+                  f"{live_hardware!r} — refusing to flash (wrong device at this IP?)",
+        )
+        return "failed"
+    hardware = live_hardware or hardware
+    variant = live_variant or variant
+    esp32 = is_esp32(hardware)
     async with SessionLocal() as session:
         row = await session.get(UpdateJobDevice, row_id)
         row.from_version = current
@@ -175,6 +216,11 @@ async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -
     except FirmwareError as exc:
         await _set_state(row_id, "failed", error=str(exc))
         return "failed"
+
+    await _set_state(
+        row_id, "precheck",
+        log_line=f"resolved binary: {final_full} (hardware={hardware}, variant={variant})",
+    )
 
     if len(hops) > 1:
         path_desc = " -> ".join(h.label for h in hops)
