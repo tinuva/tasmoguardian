@@ -39,14 +39,25 @@ async def _devices_in_active_updates(session) -> set[int]:
 
 async def poll_device(device_id: int) -> None:
     """Poll one device and persist/broadcast changes."""
+    # Read what we need, then RELEASE the session before the slow device
+    # HTTP call — holding connections across network I/O exhausts the pool.
     async with SessionLocal() as session:
         device = await session.get(Device, device_id)
         if device is None:
             return
-        changed: dict = {}
-        try:
-            status = await status0(device.ip, device.web_password)
-        except (DeviceUnreachable, DeviceCommandError):
+        ip, web_password = device.ip, device.web_password
+
+    try:
+        status = await status0(ip, web_password)
+    except (DeviceUnreachable, DeviceCommandError):
+        status = None
+
+    changed: dict = {}
+    async with SessionLocal() as session:
+        device = await session.get(Device, device_id)
+        if device is None:
+            return
+        if status is None:
             if device.online:
                 device.online = False
                 session.add(StateEvent(device_id=device.id, kind="offline"))
@@ -77,11 +88,12 @@ async def poll_device(device_id: int) -> None:
             device.last_seen_at = now
             device.last_status_json = json.dumps(status)
         await session.commit()
-        if changed:
-            await hub.broadcast(
-                "device_state",
-                {"device_id": device.id, "online": device.online, **changed},
-            )
+        online = device.online
+    if changed:
+        await hub.broadcast(
+            "device_state",
+            {"device_id": device_id, "online": online, **changed},
+        )
 
 
 async def poll_all_devices() -> None:

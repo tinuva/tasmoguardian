@@ -20,8 +20,10 @@ Hard rules implemented here:
 """
 import asyncio
 import logging
+import re
 from datetime import datetime, timezone
 
+import httpx
 from sqlalchemy import select
 
 from .backup import BackupError, take_backup
@@ -152,6 +154,62 @@ async def _await_version(
     raise TimeoutError(f"timeout awaiting reboot (last seen version: {last or 'unreachable'})")
 
 
+async def _esp32_partition_check(
+    ip: str, password: str | None, binary_path: str
+) -> str | None:
+    """Detect the pre-v12 ESP32 dual-partition layout that cannot fit
+    modern (>=13.0, Matter-era) binaries. Returns an error string if the
+    update is doomed, None if OK or undeterminable.
+
+    Safeboot layout shows a 'safeboot' partition on the info page; the
+    old layout shows two equal app_0/app_1 partitions. Since v13 the
+    stock tasmota32* binaries (~2 MB) exceed the old 1600-1856 KB OTA
+    partition — the device downloads, rejects ('Program flash size is
+    larger than real flash size') and reboots on the old version.
+    Fix is a one-time settings-preserving conversion via the Partition
+    Wizard: https://tasmota.github.io/docs/Safeboot/
+    """
+    from .config import settings as app_settings
+
+    params = {}
+    if password:
+        params = {"user": "admin", "password": password}
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(f"http://{ip}/in", params=params)
+    except httpx.HTTPError:
+        return None  # can't determine; let the normal flow proceed
+    if resp.status_code != 200:
+        return None
+    body = resp.text
+    if "safeboot" in body.lower():
+        return None  # modern layout, no constraint
+
+    # old dual layout: find app partition sizes, e.g. "Partition app_0*}21600 KB"
+    sizes_kb = [int(m) for m in re.findall(r"Partition app_?\d\*?\}2(\d+)\s*KB", body)]
+    if not sizes_kb:
+        return None  # not an old-layout signature we recognize
+
+    binary = app_settings.firmware_dir / binary_path
+    try:
+        binary_kb = binary.stat().st_size // 1024
+    except OSError:
+        return None
+    ota_kb = max(sizes_kb)
+    if binary_kb <= ota_kb:
+        return None  # still fits; upgrade will work
+
+    return (
+        f"ESP32 uses the pre-v12 dual-partition layout (OTA partition {ota_kb} KB) "
+        f"and the target firmware is {binary_kb} KB — the device would reject it "
+        "and boot back into the old version. One-time fix: convert the device to "
+        "the safeboot layout with the Partition Wizard (settings are preserved): "
+        "upload Partition_Wizard.tapp via Consoles -> Manage File System, run it "
+        "from the Consoles menu, choose 'Convert to safeboot'. Then re-run this "
+        "update. Docs: https://tasmota.github.io/docs/Safeboot/"
+    )
+
+
 async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -> str:
     """Run the state machine for one device. Returns final state."""
     async with SessionLocal() as session:
@@ -240,6 +298,14 @@ async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -
     except FirmwareError as exc:
         await _set_state(row_id, "failed", error=str(exc))
         return "failed"
+
+    # ESP32: refuse if the pre-v12 dual-partition layout can't fit the
+    # binary (device would download, reject, and boot back on old fw)
+    if esp32:
+        partition_error = await _esp32_partition_check(ip, password, hops[-1].full_path)
+        if partition_error is not None:
+            await _set_state(row_id, "failed", error=partition_error)
+            return "failed"
 
     # verify the device can reach the OTA URL from ITS perspective
     try:

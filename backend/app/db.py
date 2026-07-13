@@ -5,7 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from .config import settings
 from .models import Base
 
-engine = create_async_engine(settings.database_url, echo=False)
+engine = create_async_engine(
+    settings.database_url,
+    echo=False,
+    # SQLite connections are cheap file handles; the default pool of
+    # 5+10 exhausts under concurrent poller + update jobs + API traffic
+    # (observed live: QueuePool limit reached, 30s stalls).
+    pool_size=20,
+    max_overflow=30,
+)
 SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
