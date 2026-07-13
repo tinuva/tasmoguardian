@@ -12,6 +12,47 @@ function fmtValue(v: unknown): string {
   return typeof v === 'string' ? v : JSON.stringify(v)
 }
 
+const LONG_VALUE = 200
+
+/** Value cell that breaks anywhere (base64 blobs etc.) and collapses
+ *  very long values behind a click-to-expand. */
+function DiffValue({ value, className }: { value: unknown; className: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const text = fmtValue(value)
+  const isLong = text.length > LONG_VALUE
+
+  return (
+    <td className={`py-1 align-top break-all whitespace-pre-wrap ${className}`}>
+      {isLong && !expanded ? (
+        <>
+          {text.slice(0, LONG_VALUE)}…{' '}
+          <button
+            className="text-blue-600 hover:underline whitespace-nowrap"
+            onClick={() => setExpanded(true)}
+          >
+            +{text.length - LONG_VALUE} chars
+          </button>
+        </>
+      ) : (
+        <>
+          {text}
+          {isLong && (
+            <>
+              {' '}
+              <button
+                className="text-blue-600 hover:underline whitespace-nowrap"
+                onClick={() => setExpanded(false)}
+              >
+                collapse
+              </button>
+            </>
+          )}
+        </>
+      )}
+    </td>
+  )
+}
+
 function DiffView({ backupId, against, onClose }: { backupId: number; against: number; onClose: () => void }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['diff', backupId, against],
@@ -34,20 +75,20 @@ function DiffView({ backupId, against, onClose }: { backupId: number; against: n
         <p className="text-sm text-gray-500">No differences (volatile fields excluded).</p>
       )}
       {data && data.entries.length > 0 && (
-        <table className="w-full text-xs font-mono">
+        <table className="w-full text-xs font-mono table-fixed">
           <thead>
             <tr className="text-left text-gray-500">
-              <th className="pr-3 py-1">path</th>
-              <th className="pr-3 py-1">old</th>
-              <th className="py-1">new</th>
+              <th className="pr-3 py-1 w-1/4">path</th>
+              <th className="pr-3 py-1 w-[37.5%]">old</th>
+              <th className="py-1 w-[37.5%]">new</th>
             </tr>
           </thead>
           <tbody>
             {data.entries.map((e: DiffEntry) => (
               <tr key={e.path} className="border-t border-gray-200 align-top">
-                <td className="pr-3 py-1">{e.path}</td>
-                <td className="pr-3 py-1 text-red-700">{fmtValue(e.a)}</td>
-                <td className="py-1 text-green-700">{fmtValue(e.b)}</td>
+                <td className="pr-3 py-1 align-top break-all">{e.path}</td>
+                <DiffValue value={e.a} className="pr-3 text-red-700" />
+                <DiffValue value={e.b} className="text-green-700" />
               </tr>
             ))}
           </tbody>
