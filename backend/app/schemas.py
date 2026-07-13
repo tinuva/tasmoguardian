@@ -15,6 +15,7 @@ class DeviceOut(BaseModel):
     fw_version: str | None
     fw_variant: str | None
     hardware: str | None
+    partition_layout: str | None
     online: bool
     last_seen_at: datetime | None
     backup_schedule_enabled: bool

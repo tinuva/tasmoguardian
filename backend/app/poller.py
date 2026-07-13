@@ -16,7 +16,13 @@ from sqlalchemy import select
 
 from .db import SessionLocal
 from .models import Device, StateEvent, UpdateJobDevice
-from .tasmota import DeviceUnreachable, DeviceCommandError, extract_identity, status0
+from .tasmota import (
+    DeviceCommandError,
+    DeviceUnreachable,
+    detect_partition_layout,
+    extract_identity,
+    status0,
+)
 from .ws import hub
 
 log = logging.getLogger(__name__)
@@ -46,11 +52,20 @@ async def poll_device(device_id: int) -> None:
         if device is None:
             return
         ip, web_password = device.ip, device.web_password
+        known_layout = device.partition_layout
 
     try:
         status = await status0(ip, web_password)
     except (DeviceUnreachable, DeviceCommandError):
         status = None
+
+    # ESP32 partition layout: detect until confirmed safeboot (terminal
+    # state — a device never reverts on its own). Cheap single GET /in.
+    layout: str | None = None
+    if status is not None and known_layout != "safeboot":
+        hw = status.get("StatusFWR", {}).get("Hardware", "") or ""
+        if "ESP32" in hw.upper():
+            layout = await detect_partition_layout(ip, web_password)
 
     changed: dict = {}
     async with SessionLocal() as session:
@@ -85,6 +100,9 @@ async def poll_device(device_id: int) -> None:
             for field in ("name", "topic", "fw_variant", "hardware"):
                 if ident.get(field):
                     setattr(device, field, ident[field])
+            if layout is not None and layout != device.partition_layout:
+                device.partition_layout = layout
+                changed["partition_layout"] = layout
             device.last_seen_at = now
             device.last_status_json = json.dumps(status)
         await session.commit()

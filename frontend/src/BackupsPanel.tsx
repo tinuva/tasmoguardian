@@ -60,17 +60,19 @@ function DiffView({ backupId, against, onClose }: { backupId: number; against: n
 export function BackupsPanel({
   deviceId,
   deviceName,
-  hardware,
+  partitionLayout,
 }: {
   deviceId: number
   deviceName: string
-  hardware: string | null
+  partitionLayout: 'safeboot' | 'old' | null
 }) {
   const queryClient = useQueryClient()
   const [diffPair, setDiffPair] = useState<{ b: number; a: number } | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const isEsp32 = !!hardware && hardware.toUpperCase().includes('ESP32')
+  // Offer conversion only for devices confirmed on the old (pre-v12)
+  // dual-partition layout; hidden once safeboot is detected.
+  const needsConversion = partitionLayout === 'old'
 
   const convert = useMutation({
     mutationFn: () => api.runOperation(deviceId, 'safeboot_convert'),
@@ -193,7 +195,7 @@ export function BackupsPanel({
         <DiffView backupId={diffPair.b} against={diffPair.a} onClose={() => setDiffPair(null)} />
       )}
 
-      {isEsp32 && (
+      {needsConversion && (
         <div className="mt-4 pt-3 border-t border-gray-200">
           <h4 className="text-xs font-semibold text-gray-500 mb-1">Advanced operations</h4>
           <div className="flex items-center gap-2">
@@ -204,8 +206,8 @@ export function BackupsPanel({
                 if (
                   confirm(
                     `Convert ${deviceName} to the safeboot partition layout?\n\n` +
-                      `Only needed for ESP32 devices on the old (pre-v12) dual-partition layout that can no ` +
-                      `longer fit modern firmware. Skipped automatically if already converted.\n\n` +
+                      `This device uses the old (pre-v12) dual-partition layout and cannot fit modern ` +
+                      `firmware until converted.\n\n` +
                       `The device will REBOOT 3 TIMES, its flash will be REPARTITIONED, and it will end up ` +
                       `on the LATEST firmware. Settings are preserved and a backup is taken first, but if ` +
                       `the process fails midway the device may need serial reflashing.\n\n` +
@@ -218,7 +220,7 @@ export function BackupsPanel({
               {convert.isPending ? 'Starting…' : 'Convert to safeboot layout'}
             </button>
             <span className="text-xs text-gray-400">
-              for ESP32s stuck on old firmware ("would reject" precheck errors)
+              old partition layout detected — required before firmware updates can succeed
             </span>
           </div>
         </div>

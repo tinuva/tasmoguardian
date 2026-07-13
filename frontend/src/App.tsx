@@ -257,7 +257,11 @@ export default function App() {
                   {expanded === d.id && (
                     <tr>
                       <td colSpan={8}>
-                        <BackupsPanel deviceId={d.id} deviceName={d.name ?? d.ip} hardware={d.hardware} />
+                        <BackupsPanel
+                          deviceId={d.id}
+                          deviceName={d.name ?? d.ip}
+                          partitionLayout={d.partition_layout}
+                        />
                       </td>
                     </tr>
                   )}

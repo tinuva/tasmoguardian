@@ -32,6 +32,13 @@ async def init_db() -> None:
     settings.firmware_dir.mkdir(parents=True, exist_ok=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # lightweight additive migrations (create_all won't alter tables)
+        cols = [
+            row[1]
+            for row in (await conn.exec_driver_sql("PRAGMA table_info(device)")).fetchall()
+        ]
+        if "partition_layout" not in cols:
+            await conn.exec_driver_sql("ALTER TABLE device ADD COLUMN partition_layout TEXT")
 
 
 async def get_session():

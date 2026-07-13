@@ -3,6 +3,7 @@
 All device HTTP goes through here so passwords stay server-side and
 behavior (timeouts, auth params) is consistent.
 """
+import re
 from typing import Any
 
 import httpx
@@ -65,6 +66,28 @@ async def fetch_dmp(ip: str, web_password: str | None = None) -> bytes:
     if resp.status_code != 200:
         raise DeviceCommandError(f"{ip}: /dl HTTP {resp.status_code}")
     return resp.content
+
+
+async def detect_partition_layout(ip: str, web_password: str | None = None) -> str | None:
+    """Detect an ESP32's flash partition scheme from its /in info page.
+
+    Returns 'safeboot' (modern, v12+), 'old' (pre-v12 dual app_0/app_1 —
+    cannot fit modern firmware, needs conversion), or None (page
+    unreadable / signature not recognized; also what ESP8266 yields).
+    """
+    try:
+        async with httpx.AsyncClient(timeout=settings.device_http_timeout_s) as client:
+            resp = await client.get(f"http://{ip}/in", params=_auth_params(web_password))
+    except httpx.HTTPError:
+        return None
+    if resp.status_code != 200:
+        return None
+    body = resp.text
+    if "safeboot" in body.lower():
+        return "safeboot"
+    if re.search(r"Partition app_?\d", body):
+        return "old"
+    return None
 
 
 def extract_identity(status: dict[str, Any]) -> dict[str, Any]:

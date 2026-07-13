@@ -225,6 +225,12 @@ async def _run_conversion_steps(row_id: int, device_id: int) -> str:
         return "failed"
     layout = _is_old_layout(info)
     if layout is False:
+        # record the confirmed layout so the UI stops offering conversion
+        async with SessionLocal() as session:
+            device = await session.get(Device, device_id)
+            if device is not None:
+                device.partition_layout = "safeboot"
+                await session.commit()
         await _set_state(row_id, "skipped", log_line="device already uses the safeboot layout")
         return "skipped"
     if layout is None:
@@ -368,10 +374,14 @@ async def _run_conversion_steps(row_id: int, device_id: int) -> str:
         device = await session.get(Device, device_id)
         if device is not None:
             device.fw_version = final_version
+            device.partition_layout = "safeboot"
             session.add(StateEvent(
                 device_id=device_id, kind="version_change",
                 detail=f"safeboot conversion -> {final_version}",
             ))
-            await session.commit()
+        row = await session.get(UpdateJobDevice, row_id)
+        if row is not None:
+            row.to_version = final_version
+        await session.commit()
     await _set_state(row_id, "done", log_line=f"converted to safeboot layout, running {final_version}")
     return "done"

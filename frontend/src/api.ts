@@ -7,6 +7,7 @@ export interface Device {
   fw_version: string | null
   fw_variant: string | null
   hardware: string | null
+  partition_layout: 'safeboot' | 'old' | null
   online: boolean
   last_seen_at: string | null
   backup_schedule_enabled: boolean

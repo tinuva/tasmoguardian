@@ -32,6 +32,10 @@ class Device(Base):
     fw_version: Mapped[str | None] = mapped_column(Text)
     fw_variant: Mapped[str | None] = mapped_column(Text)
     hardware: Mapped[str | None] = mapped_column(Text)
+    # ESP32 flash partition scheme: 'safeboot' | 'old' (pre-v12 dual) | NULL
+    # (unknown / not applicable e.g. ESP8266). Detected from the device's
+    # /in page on add and by the poller; drives the safeboot-convert UI.
+    partition_layout: Mapped[str | None] = mapped_column(Text)
     online: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime)
     last_status_json: Mapped[str | None] = mapped_column(Text)

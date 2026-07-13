@@ -36,9 +36,17 @@ function JobRow({ job, deviceNames }: { job: UpdateJob; deviceNames: Map<number,
     <div className="border border-gray-200 rounded mb-3">
       <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
         <span className="font-medium text-sm">Job #{job.id}</span>
+        {job.channel === 'safeboot_convert' && (
+          <span className="bg-purple-100 text-purple-800 rounded px-1.5 py-0.5 text-xs font-medium">
+            safeboot conversion
+          </span>
+        )}
         <StateBadge state={job.status} />
         <span className="text-xs text-gray-500">
-          target {job.target_version ?? '(latest)'} · {new Date(job.created_at).toLocaleString()}
+          {job.channel === 'safeboot_convert'
+            ? 'repartition + latest firmware'
+            : `target ${job.target_version ?? '(latest)'}`}{' '}
+          · {new Date(job.created_at).toLocaleString()}
         </span>
         {job.status === 'running' && (
           <button
@@ -61,7 +69,8 @@ function JobRow({ job, deviceNames }: { job: UpdateJob; deviceNames: Map<number,
                   <StateBadge state={d.state} />
                 </td>
                 <td className="py-1.5 text-gray-500">
-                  {d.from_version ?? '?'} → {d.to_version ?? '?'}
+                  {d.from_version ?? '?'}
+                  {d.to_version ? ` → ${d.to_version}` : d.state === 'done' ? '' : ' → …'}
                 </td>
                 <td className="py-1.5 text-red-600">{d.error}</td>
                 <td className="py-1.5 text-right pr-3">

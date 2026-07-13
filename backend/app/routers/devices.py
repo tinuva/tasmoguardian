@@ -11,7 +11,14 @@ from ..db import get_session
 from ..models import Device, StateEvent
 from ..scanner import ScanError, scan_status, start_scan
 from ..schemas import CommandIn, DeviceCreate, DeviceOut, DevicePatch, StateEventOut
-from ..tasmota import DeviceCommandError, DeviceUnreachable, command, extract_identity, status0
+from ..tasmota import (
+    DeviceCommandError,
+    DeviceUnreachable,
+    command,
+    detect_partition_layout,
+    extract_identity,
+    status0,
+)
 
 router = APIRouter(prefix="/devices", tags=["devices"])
 
@@ -76,6 +83,8 @@ async def add_device(body: DeviceCreate, session: AsyncSession = Depends(get_ses
     device.online = True
     device.last_seen_at = datetime.now(timezone.utc)
     device.last_status_json = json.dumps(status)
+    if device.hardware and "ESP32" in device.hardware.upper():
+        device.partition_layout = await detect_partition_layout(device.ip, device.web_password)
 
     session.add(device)
     await session.commit()
