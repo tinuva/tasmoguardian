@@ -142,4 +142,9 @@ export const api = {
     request<{ values: AppSettings; descriptions: Record<string, string> }>('/settings'),
   putSettings: (patch: Partial<AppSettings>) =>
     request<{ values: AppSettings }>('/settings', { method: 'PUT', body: JSON.stringify(patch) }),
+  runOperation: (deviceId: number, operation: string) =>
+    request<UpdateJob>(`/devices/${deviceId}/operations`, {
+      method: 'POST',
+      body: JSON.stringify({ operation }),
+    }),
 }

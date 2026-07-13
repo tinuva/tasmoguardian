@@ -14,6 +14,7 @@ from . import mqtt
 from .poller import poll_all_devices
 from .retention import retention_sweep, scheduled_backup_all
 from .routers import backups, devices, updates
+from .routers import operations
 from .routers.settings_api import load_overrides
 from .routers import settings_api
 from .updater import fail_interrupted_jobs
@@ -72,6 +73,7 @@ app = FastAPI(title="TasmoManager", version="0.1.0", lifespan=lifespan)
 app.include_router(devices.router, prefix="/api/v1")
 app.include_router(backups.router, prefix="/api/v1")
 app.include_router(updates.router, prefix="/api/v1")
+app.include_router(operations.router, prefix="/api/v1")
 app.include_router(settings_api.router, prefix="/api/v1")
 
 

@@ -57,10 +57,29 @@ function DiffView({ backupId, against, onClose }: { backupId: number; against: n
   )
 }
 
-export function BackupsPanel({ deviceId, deviceName }: { deviceId: number; deviceName: string }) {
+export function BackupsPanel({
+  deviceId,
+  deviceName,
+  hardware,
+}: {
+  deviceId: number
+  deviceName: string
+  hardware: string | null
+}) {
   const queryClient = useQueryClient()
   const [diffPair, setDiffPair] = useState<{ b: number; a: number } | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+
+  const isEsp32 = !!hardware && hardware.toUpperCase().includes('ESP32')
+
+  const convert = useMutation({
+    mutationFn: () => api.runOperation(deviceId, 'safeboot_convert'),
+    onSuccess: () => {
+      setNotice('Safeboot conversion started — follow progress in Update jobs below.')
+      queryClient.invalidateQueries({ queryKey: ['updates'] })
+    },
+    onError: (e) => setNotice(`Conversion failed to start: ${(e as Error).message}`),
+  })
 
   const { data: backups, isLoading } = useQuery({
     queryKey: ['backups', deviceId],
@@ -172,6 +191,37 @@ export function BackupsPanel({ deviceId, deviceName }: { deviceId: number; devic
 
       {diffPair && (
         <DiffView backupId={diffPair.b} against={diffPair.a} onClose={() => setDiffPair(null)} />
+      )}
+
+      {isEsp32 && (
+        <div className="mt-4 pt-3 border-t border-gray-200">
+          <h4 className="text-xs font-semibold text-gray-500 mb-1">Advanced operations</h4>
+          <div className="flex items-center gap-2">
+            <button
+              className="border border-amber-400 text-amber-800 rounded px-2 py-0.5 text-xs hover:bg-amber-50 disabled:opacity-50"
+              disabled={convert.isPending}
+              onClick={() => {
+                if (
+                  confirm(
+                    `Convert ${deviceName} to the safeboot partition layout?\n\n` +
+                      `Only needed for ESP32 devices on the old (pre-v12) dual-partition layout that can no ` +
+                      `longer fit modern firmware. Skipped automatically if already converted.\n\n` +
+                      `The device will REBOOT 3 TIMES, its flash will be REPARTITIONED, and it will end up ` +
+                      `on the LATEST firmware. Settings are preserved and a backup is taken first, but if ` +
+                      `the process fails midway the device may need serial reflashing.\n\n` +
+                      `Takes ~3-5 minutes. Proceed?`,
+                  )
+                )
+                  convert.mutate()
+              }}
+            >
+              {convert.isPending ? 'Starting…' : 'Convert to safeboot layout'}
+            </button>
+            <span className="text-xs text-gray-400">
+              for ESP32s stuck on old firmware ("would reject" precheck errors)
+            </span>
+          </div>
+        </div>
       )}
 
       <EventTimeline deviceId={deviceId} />

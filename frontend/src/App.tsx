@@ -257,7 +257,7 @@ export default function App() {
                   {expanded === d.id && (
                     <tr>
                       <td colSpan={8}>
-                        <BackupsPanel deviceId={d.id} deviceName={d.name ?? d.ip} />
+                        <BackupsPanel deviceId={d.id} deviceName={d.name ?? d.ip} hardware={d.hardware} />
                       </td>
                     </tr>
                   )}
