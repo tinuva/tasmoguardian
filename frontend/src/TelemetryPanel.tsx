@@ -114,6 +114,97 @@ export function TelemetryPanel({ deviceId, online }: { deviceId: number; online:
           <TreeTable title="State" rows={stateRows} />
         )}
       </div>
+
+      <Sparklines deviceId={deviceId} />
+    </div>
+  )
+}
+
+/** Mini-graphs of recent numeric sensor values (server-side ring buffer,
+ *  MQTT-fed). Shows the most variable series first. */
+function Sparklines({ deviceId }: { deviceId: number }) {
+  const { data } = useQuery({
+    queryKey: ['telemetryHistory', deviceId],
+    queryFn: () => api.telemetryHistory(deviceId),
+    refetchInterval: 60_000,
+  })
+  const points = data?.points ?? []
+  if (points.length < 3) return null
+
+  // collect per-path series
+  const series = new Map<string, { ts: number; v: number }[]>()
+  for (const p of points) {
+    for (const [path, v] of Object.entries(p.values)) {
+      let arr = series.get(path)
+      if (!arr) series.set(path, (arr = []))
+      arr.push({ ts: p.ts, v })
+    }
+  }
+  const ranked = [...series.entries()]
+    .map(([path, arr]) => {
+      const vals = arr.map((x) => x.v)
+      const min = Math.min(...vals)
+      const max = Math.max(...vals)
+      return { path, arr, min, max, spread: max - min }
+    })
+    .filter((s) => s.arr.length >= 3)
+    .sort((a, b) => (b.spread === a.spread ? a.path.localeCompare(b.path) : b.spread - a.spread))
+    .slice(0, 6)
+  if (ranked.length === 0) return null
+
+  const span = points.length > 1 ? Math.round((points[points.length - 1].ts - points[0].ts) / 60) : 0
+
+  return (
+    <div className="mt-4">
+      <h4 className="text-xs font-semibold text-gray-500 mb-1">
+        Trends <span className="font-normal text-gray-400">(last {points.length} samples, ~{span} min)</span>
+      </h4>
+      <div className="grid grid-cols-3 gap-3">
+        {ranked.map((s) => (
+          <Spark key={s.path} path={s.path} arr={s.arr} min={s.min} max={s.max} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Spark({
+  path,
+  arr,
+  min,
+  max,
+}: {
+  path: string
+  arr: { ts: number; v: number }[]
+  min: number
+  max: number
+}) {
+  const W = 160
+  const H = 36
+  const range = max - min || 1
+  const pts = arr
+    .map((p, i) => {
+      const x = (i / (arr.length - 1)) * W
+      const y = H - ((p.v - min) / range) * (H - 4) - 2
+      return `${x.toFixed(1)},${y.toFixed(1)}`
+    })
+    .join(' ')
+  const last = arr[arr.length - 1].v
+  return (
+    <div className="border border-gray-200 rounded p-2 bg-white">
+      <div className="flex justify-between items-baseline">
+        <span className="text-[10px] text-gray-500 truncate" title={path}>
+          {path}
+        </span>
+        <span className="text-xs font-mono font-medium">{Number.isInteger(last) ? last : last.toFixed(2)}</span>
+      </div>
+      <svg width={W} height={H} className="block">
+        <polyline points={pts} fill="none" stroke="#2563eb" strokeWidth="1.5" />
+      </svg>
+      <div className="flex justify-between text-[9px] text-gray-400 font-mono">
+        <span>{min.toFixed(1)}</span>
+        <span>{max.toFixed(1)}</span>
+      </div>
     </div>
   )
 }

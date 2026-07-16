@@ -5,7 +5,7 @@ import { useWs } from './useWs'
 import { DevicePanel } from './DevicePanel'
 import { UpdatesPanel } from './UpdatesPanel'
 import { SettingsPanel } from './SettingsPanel'
-import { parseStatus, powerStates, statusPath, VIEWS } from './tasmota'
+import { parseBssidAliases, parseStatus, powerStates, statusPath, VIEWS } from './tasmota'
 
 function timeAgo(iso: string | null): string {
   if (!iso) return 'never'
@@ -174,6 +174,12 @@ export default function App() {
     queryFn: api.latestRelease,
     staleTime: 6 * 3600 * 1000,
   })
+  const { data: settingsData } = useQuery({
+    queryKey: ['settings'],
+    queryFn: api.getSettings,
+    staleTime: 600_000,
+  })
+  const bssidAliases = parseBssidAliases(settingsData?.values.bssid_aliases ?? '')
   const del = useMutation({
     mutationFn: api.deleteDevice,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['devices'] }),
@@ -339,11 +345,16 @@ export default function App() {
                     </td>
                     <td className="py-2 pr-4 font-mono">{d.ip}</td>
                     {viewCols ? (
-                      viewCols.map((c) => (
-                        <td key={c.path} className="py-2 pr-4 text-gray-600 max-w-48 truncate" title={statusPath(status, c.path)}>
-                          {statusPath(status, c.path)}
-                        </td>
-                      ))
+                      viewCols.map((c) => {
+                        let val = statusPath(status, c.path)
+                        if (c.label === 'BSSId' && bssidAliases[val.toUpperCase()])
+                          val = `${bssidAliases[val.toUpperCase()]} (${val})`
+                        return (
+                          <td key={c.path} className="py-2 pr-4 text-gray-600 max-w-48 truncate" title={val}>
+                            {val}
+                          </td>
+                        )
+                      })
                     ) : (
                       <>
                         <td className="py-2 pr-4">

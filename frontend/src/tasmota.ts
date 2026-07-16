@@ -133,6 +133,19 @@ export function statusPath(status: StatusBlob | null, path: string): string {
   return typeof cur === 'object' ? JSON.stringify(cur) : String(cur)
 }
 
+/** Parse "AA:BB:..=Name,CC:DD:..=Other" into a MAC->name map (M9 BSSId aliasing). */
+export function parseBssidAliases(raw: string): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const pair of raw.split(',')) {
+    const eq = pair.indexOf('=')
+    if (eq <= 0) continue
+    const mac = pair.slice(0, eq).trim().toUpperCase()
+    const name = pair.slice(eq + 1).trim()
+    if (mac && name) out[mac] = name
+  }
+  return out
+}
+
 /** Reset modes with TDM-style descriptions (Tasmota `Reset` command). */
 export const RESET_MODES: { mode: number; label: string; desc: string }[] = [
   { mode: 1, label: 'Reset 1', desc: 'Reset device settings to firmware defaults and restart. Wi-Fi credentials are wiped too.' },

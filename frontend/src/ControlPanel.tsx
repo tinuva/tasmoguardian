@@ -43,7 +43,7 @@ export function ControlPanel({ device }: { device: Device }) {
 
   return (
     <div className="space-y-4">
-      {notice && <p className="text-xs text-red-600">{notice}</p>}
+      {notice && <p className="text-xs text-gray-600">{notice}</p>}
 
       {/* Relays */}
       <div>
@@ -130,17 +130,23 @@ export function ControlPanel({ device }: { device: Device }) {
               </div>
             )}
             {light.channels &&
-              light.channels.map((v, i) => (
-                <Slider
-                  key={i}
-                  label={`Channel ${i + 1}: ${v}`}
-                  min={0}
-                  max={100}
-                  value={v}
-                  disabled={!device.online}
-                  onCommit={(nv) => cmd.mutate(`Channel${i + 1} ${nv}`)}
-                />
-              ))}
+              light.channels.map((v, i) => {
+                // SO15=1 (default): Channel is 0-100. SO15=0: raw PWM 0-1023
+                // (Pwm command instead). Infer from observed values.
+                const raw = light.channels!.some((c) => c > 100)
+                const max = raw ? 1023 : 100
+                return (
+                  <Slider
+                    key={i}
+                    label={`Channel ${i + 1}: ${v}`}
+                    min={0}
+                    max={max}
+                    value={v}
+                    disabled={!device.online}
+                    onCommit={(nv) => cmd.mutate(raw ? `Pwm${i + 1} ${nv}` : `Channel${i + 1} ${nv}`)}
+                  />
+                )
+              })}
           </div>
         </div>
       )}
@@ -207,6 +213,28 @@ export function ControlPanel({ device }: { device: Device }) {
             deviceName={device.name ?? device.ip}
             onReset={(mode) => cmd.mutate(`Reset ${mode}`)}
           />
+          {device.topic && (
+            <button
+              className="border border-gray-300 rounded px-2 py-1 text-xs hover:bg-gray-50"
+              title="Publish empty retained payloads for this device's LWT/POWER topics (stale-broker cleanup)"
+              onClick={async () => {
+                if (
+                  !confirm(
+                    `Clear retained MQTT topics for ${device.name ?? device.ip}?\n\nPublishes empty retained payloads to its LWT and POWER stat/cmnd topics. Harmless for a live device (it re-publishes on next telemetry), useful to purge topics of renamed/removed devices.`,
+                  )
+                )
+                  return
+                try {
+                  const r = await api.clearRetained(device.id)
+                  setNotice(`Cleared ${r.cleared} retained topics.`)
+                } catch (e) {
+                  setNotice((e as Error).message)
+                }
+              }}
+            >
+              Clear retained MQTT
+            </button>
+          )}
         </div>
       </div>
     </div>

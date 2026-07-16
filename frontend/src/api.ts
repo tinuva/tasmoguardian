@@ -96,12 +96,20 @@ export interface AppSettings {
   poll_interval_s: number
   ota_base_url: string
   mqtt_broker_url: string
+  mqtt_discovery_enabled: boolean
+  mqtt_topic_patterns: string
+  bssid_aliases: string
   backup_cron_hour: number
   backup_cron_minute: number
   retention_keep_last: number
   retention_keep_monthly: number
   retention_pre_update_days: number
   retention_events_days: number
+}
+
+export interface TelemetryPoint {
+  ts: number
+  values: Record<string, number>
 }
 
 const API = '/api/v1'
@@ -134,6 +142,12 @@ export const api = {
   commandHistory: (id: number) => request<CommandLogEntry[]>(`/devices/${id}/command-history`),
   telemetry: (id: number, refresh = false) =>
     request<Telemetry>(`/devices/${id}/telemetry${refresh ? '?refresh=true' : ''}`),
+  telemetryHistory: (id: number) =>
+    request<{ points: TelemetryPoint[] }>(`/devices/${id}/telemetry/history`),
+  clearRetained: (id: number) =>
+    request<{ cleared: number; topics: string[] }>(`/devices/${id}/clear-retained`, {
+      method: 'POST',
+    }),
   listDeviceBackups: (deviceId: number) => request<Backup[]>(`/devices/${deviceId}/backups`),
   triggerBackup: (deviceId: number) =>
     request<{ backup: Backup; deduplicated: boolean }>(`/devices/${deviceId}/backups`, {

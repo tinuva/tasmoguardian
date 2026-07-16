@@ -21,10 +21,19 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 # key -> (type, description)
+def _bool(v) -> bool:
+    if isinstance(v, bool):
+        return v
+    return str(v).strip().lower() in ("1", "true", "yes", "on")
+
+
 MUTABLE_KEYS: dict[str, tuple[type, str]] = {
     "poll_interval_s": (int, "Device status poll interval (seconds)"),
     "ota_base_url": (str, "Firmware base URL for devices — plain HTTP only"),
     "mqtt_broker_url": (str, "MQTT broker URL (mqtt://user:pass@host:port); empty disables"),
+    "mqtt_discovery_enabled": (_bool, "Auto-register devices from tasmota/discovery messages"),
+    "mqtt_topic_patterns": (str, "FullTopic patterns, comma-separated (%prefix%/%topic%/)"),
+    "bssid_aliases": (str, "AP MAC aliases: MAC=Name,MAC=Name (Wifi view)"),
     "backup_cron_hour": (int, "Daily backup hour (0-23)"),
     "backup_cron_minute": (int, "Daily backup minute (0-59)"),
     "retention_keep_last": (int, "Keep newest N backups per device"),
@@ -38,6 +47,9 @@ class SettingsPatch(BaseModel):
     poll_interval_s: int | None = None
     ota_base_url: str | None = None
     mqtt_broker_url: str | None = None
+    mqtt_discovery_enabled: bool | None = None
+    mqtt_topic_patterns: str | None = None
+    bssid_aliases: str | None = None
     backup_cron_hour: int | None = None
     backup_cron_minute: int | None = None
     retention_keep_last: int | None = None
@@ -101,6 +113,15 @@ async def put_settings(body: SettingsPatch, session: AsyncSession = Depends(get_
             "ota_base_url must be plain HTTP — devices cannot fetch firmware over "
             "HTTPS (see README: The Tasmota OTA URL problem)",
         )
+    if "mqtt_topic_patterns" in changed:
+        pats = [p.strip() for p in changed["mqtt_topic_patterns"].split(",") if p.strip()]
+        if not pats:
+            raise HTTPException(422, "mqtt_topic_patterns must contain at least one pattern")
+        for p in pats:
+            if "%topic%" not in p or "%prefix%" not in p:
+                raise HTTPException(
+                    422, f"pattern {p!r} must contain both %prefix% and %topic%"
+                )
 
     for key, value in changed.items():
         setattr(settings, key, value)
@@ -126,7 +147,7 @@ async def put_settings(body: SettingsPatch, session: AsyncSession = Depends(get_
             hour=settings.backup_cron_hour,
             minute=settings.backup_cron_minute,
         )
-    if "mqtt_broker_url" in changed:
+    if "mqtt_broker_url" in changed or "mqtt_topic_patterns" in changed or "mqtt_discovery_enabled" in changed:
         await mqtt.stop()
         mqtt.start()
 

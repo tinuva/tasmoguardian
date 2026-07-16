@@ -2,10 +2,13 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type AppSettings } from './api'
 
-const FIELDS: { key: keyof AppSettings; label: string; type: 'number' | 'text' }[] = [
+const FIELDS: { key: keyof AppSettings; label: string; type: 'number' | 'text' | 'checkbox' }[] = [
   { key: 'poll_interval_s', label: 'Status poll interval (s)', type: 'number' },
   { key: 'ota_base_url', label: 'OTA base URL (plain HTTP!)', type: 'text' },
   { key: 'mqtt_broker_url', label: 'MQTT broker URL (empty = off)', type: 'text' },
+  { key: 'mqtt_topic_patterns', label: 'MQTT FullTopic patterns (comma-sep)', type: 'text' },
+  { key: 'mqtt_discovery_enabled', label: 'MQTT native discovery (auto-register)', type: 'checkbox' },
+  { key: 'bssid_aliases', label: 'BSSId aliases (MAC=Name,…)', type: 'text' },
   { key: 'backup_cron_hour', label: 'Backup hour (0-23)', type: 'number' },
   { key: 'backup_cron_minute', label: 'Backup minute (0-59)', type: 'number' },
   { key: 'retention_keep_last', label: 'Keep last N backups', type: 'number' },
@@ -46,17 +49,26 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         {FIELDS.map((f) => (
           <label key={f.key} className="text-xs text-gray-600">
             {f.label}
-            <input
-              className="mt-0.5 block w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white"
-              type={f.type}
-              value={values[f.key] as string | number}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value,
-                })
-              }
-            />
+            {f.type === 'checkbox' ? (
+              <input
+                className="mt-1.5 block"
+                type="checkbox"
+                checked={Boolean(values[f.key])}
+                onChange={(e) => setDraft({ ...draft, [f.key]: e.target.checked })}
+              />
+            ) : (
+              <input
+                className="mt-0.5 block w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white"
+                type={f.type}
+                value={values[f.key] as string | number}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value,
+                  })
+                }
+              />
+            )}
           </label>
         ))}
       </div>

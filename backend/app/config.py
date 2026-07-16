@@ -15,6 +15,15 @@ class Settings(BaseSettings):
     # reachable from the device LAN. Empty -> derived from request host.
     ota_base_url: str = ""
     mqtt_broker_url: str = ""
+    # Auto-register devices from Tasmota native discovery
+    # (tasmota/discovery/+/config retained messages)
+    mqtt_discovery_enabled: bool = True
+    # FullTopic patterns to subscribe/parse (comma-separated). Tokens:
+    # %prefix% (tele/stat/cmnd), %topic%; anything else matches one level.
+    mqtt_topic_patterns: str = "%prefix%/%topic%/,%topic%/%prefix%/"
+    # Friendly names for AP MACs in the Wifi view, e.g.
+    # "AA:BB:CC:DD:EE:FF=AP-Living,11:22:33:44:55:66=AP-Garage"
+    bssid_aliases: str = ""
     # Backup schedule (cron, local time) and retention policy
     backup_cron_hour: int = 3
     backup_cron_minute: int = 15

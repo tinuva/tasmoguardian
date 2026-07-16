@@ -1,20 +1,57 @@
 # TasmoGuardian
 
-Self-hosted web app to manage, back up, and update firmware on Tasmota
+Self-hosted web app to manage, back up, update, and control Tasmota
 devices. Replaces TasmoAdmin (device management / OTA) and TasmoBackupV1
 (scheduled backups) with a verified firmware-update engine and backups
 decoded to human-readable JSON (via `decode-config`) with diffing and
-content-based deduplication.
+content-based deduplication — plus per-device control, console,
+telemetry, and configuration dialogs in the spirit of
+[TDM](https://github.com/jziolkowski/tdm), server-side.
+
+## Features
+
+- **Devices**: add by IP, subnet scan, MQTT native discovery
+  (`tasmota/discovery`) auto-registration; MAC-keyed identity survives
+  DHCP changes; table views (Home/Health/Firmware/Wifi/MQTT), CSV export.
+- **Monitoring**: HTTP status poller + optional MQTT (LWT instant
+  online/offline, tele/STATE, tele/SENSOR telemetry with sparkline
+  trends); per-device event timeline.
+- **Control**: relay toggles, light color/dimmer/CT/channels, shutters,
+  restart, reset (mode picker), per-device console with persisted
+  history; commands fall back to MQTT (`cmnd/...` → `stat/RESULT`) when
+  a device is HTTP-unreachable.
+- **Configuration**: timers, buttons/switches (SwitchMode, debounces,
+  SetOptions), power (PowerOnState, Interlock, PulseTime), module/GPIO/
+  template pickers, rules editor with Var/Mem/RuleTimer monitor, OtaUrl
+  and TelePeriod setters.
+- **Backups**: raw `.dmp` + decoded JSON, two-tier dedup, diff any two,
+  restore, schedules, retention (see below).
+- **Updates**: verified state machine (backup → precheck → flash →
+  version-verify), ESP8266 minimal two-step + migration ladder for old
+  firmware, ESP32 direct with partition-layout precheck and automated
+  safeboot conversion, latest-release or custom-URL binaries (mirrored
+  server-side), built-in plain-HTTP OTA server.
+- **MQTT tools**: clear retained topics per device; custom FullTopic
+  patterns.
 
 ## Status
 
 - [x] M0 — decode-config prototype: volatile-field list, dedup hashing (see `m0/`)
 - [x] M1 — skeleton: device CRUD, Status 0 ingestion, status poller, WS, SPA scaffold, Dockerfile
 - [x] M2 — backup engine (fetch/decode/dedup/store), schedules, retention, diff, restore
-- [ ] M3 — firmware update engine with per-step verification
-- [ ] M4 — polish: subnet scan, MQTT listener, event timeline, settings UI
+- [x] M3 — firmware update engine with per-step verification, migration ladder, custom-URL channel
+- [x] M4 — polish: subnet scan, MQTT listener, event timeline, settings UI
+- [x] M5 — device interaction: console, relay controls, restart/reset, table views, CSV, device edit
+- [x] M6 — telemetry: tele/SENSOR viewer, active Status 8 polling, TelePeriod, sparklines
+- [x] M7 — config dialogs: timers, buttons/switches, power, module/GPIO/template, OtaUrl
+- [x] M8 — rules editor + Var/Mem monitor, light control, shutters
+- [x] M9 — MQTT depth: native discovery, publish (clear retained), command fallback, FullTopic patterns
 
-## The Tasmota OTA URL problem (read before M3 / firmware updates)
+Deliberately not implemented: native auth (deploy behind a reverse-proxy
+auth layer, e.g. Traefik basic auth; `/ota/*` must stay exempt and
+plain-HTTP), automated tests (verified against a live fleet instead).
+
+## The Tasmota OTA URL problem (read before configuring updates)
 
 Tasmota devices download firmware themselves: the manager sets `OtaUrl`
 on the device and issues `Upgrade 1`; the **device** then fetches the
@@ -46,11 +83,17 @@ How TasmoGuardian addresses this:
   device LAN, e.g. `http://10.0.21.13:8000/ota` (host LAN IP + published
   port), bypassing any TLS proxy. The UI/API can still live behind
   HTTPS — only `/ota/*` needs the direct path.
-- The update engine **verifies the device can reach the OTA URL before
-  flashing** (precheck step) and fails fast with a per-device error
-  instead of flashing blind.
+- The update engine **verifies the device can reach the OTA server
+  before flashing** (precheck: device-side `WebQuery` against a tiny
+  probe file — not the binary itself, which the device would fully
+  download) and fails fast with a per-device error instead of flashing
+  blind.
 - Success is confirmed by reading the firmware version after reboot,
   never by a fixed timer.
+- **Custom binaries** (custom-URL channel) are mirrored server-side at
+  job creation and served from the local `/ota` mount — devices never
+  fetch the user-supplied URL directly, so HTTPS/auth problems with the
+  source fail at job creation, not on-device mid-flash.
 
 ## Migration path (old firmware)
 
@@ -145,7 +188,10 @@ services:
 | `TG_PORT` | `8000` | Listen port |
 | `TG_POLL_INTERVAL_S` | `60` | Device status poll interval |
 | `TG_OTA_BASE_URL` | (derived) | Advertised firmware base URL for devices — plain HTTP only |
-| `TG_MQTT_BROKER_URL` | (off) | Optional MQTT broker for instant online/offline |
+| `TG_MQTT_BROKER_URL` | (off) | Optional MQTT broker for instant online/offline, telemetry, discovery |
+| `TG_MQTT_DISCOVERY_ENABLED` | `true` | Auto-register devices from `tasmota/discovery` retained messages |
+| `TG_MQTT_TOPIC_PATTERNS` | `%prefix%/%topic%/,%topic%/%prefix%/` | FullTopic patterns to subscribe/parse (comma-separated) |
+| `TG_BSSID_ALIASES` | (empty) | AP MAC aliases for the Wifi view: `MAC=Name,MAC=Name` |
 | `TG_BACKUP_CRON_HOUR` / `TG_BACKUP_CRON_MINUTE` | `3` / `15` | Daily scheduled backup time |
 | `TG_RETENTION_KEEP_LAST` | `10` | Keep newest N backups per device |
 | `TG_RETENTION_KEEP_MONTHLY` | `12` | Keep one backup per month, N months |

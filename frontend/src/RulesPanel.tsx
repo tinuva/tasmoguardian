@@ -12,17 +12,26 @@ import { api } from './api'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Obj = Record<string, any>
 
-const RULE_LIMIT = 511 // pre-8.2.0.6 hard limit; newer allows more but stay visible
+const RULE_LIMIT_FALLBACK = 511 // pre-8.2.0.6; modern firmware reports Length+Free
 
-function parseRule(resp: Obj | undefined, n: number): { state: boolean; once: boolean; stopOnError: boolean; text: string } | null {
+function parseRule(
+  resp: Obj | undefined,
+  n: number,
+): { state: boolean; once: boolean; stopOnError: boolean; text: string; limit: number } | null {
   const r = resp?.[`Rule${n}`]
   if (r === undefined) return null
   if (typeof r === 'object' && r !== null) {
+    // modern firmware reports current Length + remaining Free -> real capacity
+    const limit =
+      typeof r.Length === 'number' && typeof r.Free === 'number'
+        ? r.Length + r.Free
+        : RULE_LIMIT_FALLBACK
     return {
       state: r.State === 'ON',
       once: r.Once === 'ON',
       stopOnError: r.StopOnError === 'ON',
       text: String(r.Rules ?? ''),
+      limit,
     }
   }
   // legacy flat format
@@ -31,6 +40,7 @@ function parseRule(resp: Obj | undefined, n: number): { state: boolean; once: bo
     once: resp?.Once === 'ON',
     stopOnError: resp?.StopOnError === 'ON',
     text: String(resp?.Rules ?? ''),
+    limit: RULE_LIMIT_FALLBACK,
   }
 }
 
@@ -166,8 +176,8 @@ export function RulesPanel({ deviceId, online }: { deviceId: number; online: boo
             </label>
           </>
         )}
-        <span className={`ml-auto font-mono ${folded.length > RULE_LIMIT ? 'text-red-600 font-bold' : 'text-gray-400'}`}>
-          {folded.length}/{RULE_LIMIT}
+        <span className={`ml-auto font-mono ${rule && folded.length > rule.limit ? 'text-red-600 font-bold' : 'text-gray-400'}`}>
+          {folded.length}/{rule?.limit ?? RULE_LIMIT_FALLBACK}
         </span>
       </div>
 
