@@ -42,7 +42,12 @@ async def create_update(body: UpdateCreate, session: AsyncSession = Depends(get_
     if body.channel not in ("release", "custom_url"):
         raise HTTPException(422, "channel must be release or custom_url")
     if body.channel == "custom_url":
-        raise HTTPException(501, "custom_url channel not implemented yet")
+        url = (body.custom_url or "").strip()
+        if not url:
+            raise HTTPException(422, "custom_url is required for the custom_url channel")
+        if not url.lower().startswith(("http://", "https://")):
+            raise HTTPException(422, "custom_url must be an http(s) URL")
+        body.custom_url = url
 
     async with _create_lock:
         devices = (
@@ -68,7 +73,7 @@ async def create_update(body: UpdateCreate, session: AsyncSession = Depends(get_
         if active:
             raise HTTPException(409, f"devices already in an active update job: {sorted(set(active))}")
 
-        job = UpdateJob(channel=body.channel, status="running")
+        job = UpdateJob(channel=body.channel, status="running", custom_url=body.custom_url)
         session.add(job)
         await session.flush()
         for device in devices:

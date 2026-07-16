@@ -41,6 +41,14 @@ function JobRow({ job, deviceNames }: { job: UpdateJob; deviceNames: Map<number,
             safeboot conversion
           </span>
         )}
+        {job.channel === 'custom_url' && (
+          <span
+            className="bg-indigo-100 text-indigo-800 rounded px-1.5 py-0.5 text-xs font-medium"
+            title={job.custom_url ?? ''}
+          >
+            custom firmware
+          </span>
+        )}
         <StateBadge state={job.status} />
         <span className="text-xs text-gray-500">
           {job.channel === 'safeboot_convert'

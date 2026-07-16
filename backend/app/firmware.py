@@ -9,6 +9,7 @@ import asyncio
 import logging
 import re
 import time
+from pathlib import Path
 
 import httpx
 
@@ -142,3 +143,62 @@ def ota_url_for(path: str) -> str:
             "from the device LAN (see README: The Tasmota OTA URL problem)."
         )
     return f"{base}/{path}"
+
+
+PROBE_FILENAME = "reachability-probe.txt"
+
+
+def probe_url() -> str:
+    """Tiny file under /ota used for the device-side reachability precheck.
+
+    WebQuery does a full GET — probing the actual firmware binary makes
+    the device download megabytes and blows the precheck timeout (found
+    live with a 2 MB tasmota32 binary). A 1-line file exercises the same
+    device -> server HTTP path.
+    """
+    dest = settings.firmware_dir / PROBE_FILENAME
+    if not dest.is_file():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text("tasmoguardian ota reachability probe\n")
+    return ota_url_for(PROBE_FILENAME)
+
+
+async def mirror_custom_firmware(url: str, job_id: int) -> str:
+    """Download a user-supplied firmware binary to the local mirror.
+
+    The device always fetches from OUR plain-HTTP /ota mount — never the
+    user's URL directly — so HTTPS/auth/reachability problems with the
+    source URL fail HERE, at job creation, not on-device mid-flash.
+    Returns the mirror-relative path.
+    """
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise FirmwareError(f"invalid firmware URL: {url!r}")
+    filename = Path(parsed.path).name
+    if not re.fullmatch(r"[A-Za-z0-9._-]+\.(bin|bin\.gz)", filename or ""):
+        raise FirmwareError(
+            f"URL must point to a .bin or .bin.gz file (got {filename!r})"
+        )
+    rel = f"custom/job{job_id}-{filename}"
+    dest = settings.firmware_dir / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".part")
+    try:
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+            resp = await client.get(url)
+            if resp.status_code != 200:
+                raise FirmwareError(f"custom URL {url} returned HTTP {resp.status_code}")
+            if len(resp.content) < 100_000:
+                raise FirmwareError(
+                    f"custom URL {url} returned suspiciously small file "
+                    f"({len(resp.content)} bytes) — not a firmware binary?"
+                )
+            tmp.write_bytes(resp.content)
+            tmp.rename(dest)
+    except httpx.HTTPError as exc:
+        tmp.unlink(missing_ok=True)
+        raise FirmwareError(f"failed to fetch custom firmware from {url}: {exc}") from exc
+    log.info("mirrored custom firmware %s (%d bytes)", rel, dest.stat().st_size)
+    return rel

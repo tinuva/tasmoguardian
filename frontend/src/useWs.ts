@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import type { Device, WsMessage } from './api'
+import type { Device, Telemetry, WsMessage } from './api'
 
 /** Connect to /ws and patch/invalidate the TanStack Query cache (PRD section 7). */
 export function useWs() {
@@ -40,6 +40,14 @@ export function useWs() {
             break
           case 'update_progress':
             queryClient.invalidateQueries({ queryKey: ['updates', msg.data.job_id] })
+            break
+          case 'telemetry':
+            // patch the per-device telemetry cache directly (M6)
+            queryClient.setQueryData<Telemetry>(['telemetry', msg.data.device_id], (old) => ({
+              ...old,
+              [msg.data.kind]: msg.data.payload,
+              [`${msg.data.kind}_ts`]: Date.now() / 1000,
+            }))
             break
           default:
             queryClient.invalidateQueries()

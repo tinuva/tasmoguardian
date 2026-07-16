@@ -33,8 +33,10 @@ from .firmware import (
     firmware_filename,
     is_esp32,
     latest_release_version,
+    mirror_custom_firmware,
     mirror_firmware,
     ota_url_for,
+    probe_url,
 )
 from .migration import Hop, MigrationError, plan_hops
 from .models import Device, UpdateJob, UpdateJobDevice
@@ -210,8 +212,16 @@ async def _esp32_partition_check(
     )
 
 
-async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -> str:
-    """Run the state machine for one device. Returns final state."""
+async def _update_one_device(
+    job: UpdateJob, row_id: int, target_version: str, custom_path: str | None = None
+) -> str:
+    """Run the state machine for one device. Returns final state.
+
+    custom_path: mirror-relative path of a user-supplied binary
+    (custom_url channel). Skips the migration ladder and version-target
+    verification (the binary's version is unknown to us) — success is
+    the device coming back on a full (non-minimal) firmware.
+    """
     async with SessionLocal() as session:
         row = await session.get(UpdateJobDevice, row_id)
         device = await session.get(Device, row.device_id)
@@ -255,19 +265,25 @@ async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -
         row.to_version = target_version
         await session.commit()
 
-    if _norm_version(current) == _norm_version(target_version):
+    if custom_path is None and _norm_version(current) == _norm_version(target_version):
         await _set_state(row_id, "skipped", log_line=f"already on {current}")
         return "skipped"
 
     # ---- plan the migration path (ESP8266 stepping stones per
     # tasmota.github.io/docs/Upgrading; ESP32 goes direct) ----
     try:
-        final_full = firmware_filename(variant, hardware, minimal=False)
-        final_minimal = None if esp32 else firmware_filename(variant, hardware, minimal=True)
-        if esp32:
-            hops = [Hop(label="target", full_path=final_full, minimal_path=None, final=True)]
+        if custom_path is not None:
+            # user-supplied binary: single hop, no ladder. ESP8266 still
+            # needs the minimal two-step (current-release minimal).
+            final_minimal = None if esp32 else firmware_filename(variant, hardware, minimal=True)
+            hops = [Hop(label="custom", full_path=custom_path, minimal_path=final_minimal, final=True)]
         else:
-            hops = plan_hops(current, final_full, final_minimal)
+            final_full = firmware_filename(variant, hardware, minimal=False)
+            final_minimal = None if esp32 else firmware_filename(variant, hardware, minimal=True)
+            if esp32:
+                hops = [Hop(label="target", full_path=final_full, minimal_path=None, final=True)]
+            else:
+                hops = plan_hops(current, final_full, final_minimal)
     except MigrationError as exc:
         await _set_state(row_id, "failed", error=str(exc))
         return "failed"
@@ -277,7 +293,7 @@ async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -
 
     await _set_state(
         row_id, "precheck",
-        log_line=f"resolved binary: {final_full} (hardware={hardware}, variant={variant})",
+        log_line=f"resolved binary: {hops[-1].full_path} (hardware={hardware}, variant={variant})",
     )
 
     if len(hops) > 1:
@@ -288,13 +304,16 @@ async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -
         )
 
     # mirror ALL binaries for the whole path first (fail before touching
-    # the device — never strand a device mid-ladder on a mirror error)
+    # the device — never strand a device mid-ladder on a mirror error).
+    # A custom binary is already mirrored at job creation; only its
+    # minimal stepping stone (ESP8266) still needs fetching.
     try:
         for hop in hops:
-            await mirror_firmware(hop.full_path)
+            if not hop.full_path.startswith("custom/"):
+                await mirror_firmware(hop.full_path)
             if hop.minimal_path is not None:
                 await mirror_firmware(hop.minimal_path)
-        full_url = ota_url_for(hops[-1].full_path)
+        ota_url_for(hops[-1].full_path)  # validate ota_base_url is configured
     except FirmwareError as exc:
         await _set_state(row_id, "failed", error=str(exc))
         return "failed"
@@ -307,17 +326,20 @@ async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -
             await _set_state(row_id, "failed", error=partition_error)
             return "failed"
 
-    # verify the device can reach the OTA URL from ITS perspective
+    # verify the device can reach the OTA server from ITS perspective.
+    # Probe a tiny file, not the binary: WebQuery does a full GET, and a
+    # 2 MB tasmota32 binary blows the 15s timeout (observed live).
     try:
-        wq = await command(ip, f"WebQuery {full_url} GET", password, timeout=15.0)
+        reach_url = probe_url()
+        wq = await command(ip, f"WebQuery {reach_url} GET", password, timeout=15.0)
         result = str(wq.get("WebQuery", ""))
         if "Done" not in result:
             await _set_state(
                 row_id, "failed",
-                error=f"device cannot reach {full_url} (WebQuery: {result or 'no response'})",
+                error=f"device cannot reach {reach_url} (WebQuery: {result or 'no response'})",
             )
             return "failed"
-        await _set_state(row_id, "precheck", log_line=f"OTA URL reachable from device: {full_url}")
+        await _set_state(row_id, "precheck", log_line=f"OTA server reachable from device: {reach_url}")
     except (DeviceUnreachable, DeviceCommandError) as exc:
         # Older firmware may lack WebQuery -> unknown command returns error
         msg = str(exc)
@@ -384,7 +406,13 @@ async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -
 
         # -- await + verify this hop --
         await _set_state(row_id, "await_full")
-        if hop.final:
+        if custom_path is not None:
+            # custom binary: its version string is unknown to us. Success
+            # = device back on a full (non-minimal) firmware that differs
+            # from where we started, or same version rebooted (re-flash).
+            predicate = lambda v: not _is_minimal(v)  # noqa: E731
+            expect = "any full firmware"
+        elif hop.final:
             predicate = lambda v: not _is_minimal(v) and _norm_version(v) == target_norm  # noqa: E731
             expect = target_version
         else:
@@ -411,6 +439,11 @@ async def _update_one_device(job: UpdateJob, row_id: int, target_version: str) -
             return "failed"
 
     await _set_state(row_id, "verify", log_line=f"device reports {version}")
+    if custom_path is not None:
+        async with SessionLocal() as session:
+            row = await session.get(UpdateJobDevice, row_id)
+            row.to_version = version
+            await session.commit()
     async with SessionLocal() as session:
         device = await session.get(Device, device_id)
         if device is not None:
@@ -433,8 +466,29 @@ async def run_update_job(job_id: int) -> None:
         ).scalars().all()
         row_ids = [r.id for r in rows]
         target = job.target_version or ""
+        channel = job.channel
+        custom_url = job.custom_url
 
-    if not target:
+    custom_path: str | None = None
+    if channel == "custom_url":
+        # Mirror the user's binary ONCE before touching any device; the
+        # devices fetch from our plain-HTTP /ota, never the source URL.
+        try:
+            custom_path = await mirror_custom_firmware(custom_url or "", job_id)
+        except FirmwareError as exc:
+            for rid in row_ids:
+                await _set_state(rid, "failed", error=str(exc))
+            async with SessionLocal() as session:
+                job = await session.get(UpdateJob, job_id)
+                job.status = "partial_failure"
+                await session.commit()
+            return
+        target = custom_url or "custom"
+        async with SessionLocal() as session:
+            job = await session.get(UpdateJob, job_id)
+            job.target_version = f"custom: {custom_path.rsplit('/', 1)[-1]}"
+            await session.commit()
+    elif not target:
         try:
             target = await latest_release_version()
         except FirmwareError as exc:
@@ -464,7 +518,7 @@ async def run_update_job(job_id: int) -> None:
                     results.append("cancelled")
                     return
             try:
-                results.append(await _update_one_device(job, rid, target))
+                results.append(await _update_one_device(job, rid, target, custom_path))
             except Exception as exc:  # never let one device kill the job
                 log.exception("update failed for row %s", rid)
                 await _set_state(rid, "failed", error=f"internal error: {exc}")

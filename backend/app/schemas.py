@@ -21,6 +21,9 @@ class DeviceOut(BaseModel):
     backup_schedule_enabled: bool
     created_at: datetime
     updated_at: datetime
+    # raw last Status 0 blob (JSON string; parsed client-side) — powers
+    # the table views, relay state icons, and CSV export in the UI (M5)
+    last_status_json: str | None = None
     # web_password intentionally omitted (write-only; PRD section 12)
 
 
@@ -36,6 +39,18 @@ class DevicePatch(BaseModel):
 
 
 class CommandIn(BaseModel):
+    cmnd: str
+    # persist to per-device console history (console sets this; internal
+    # dialog-driven commands leave it off)
+    log_history: bool = False
+
+
+class CommandLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    device_id: int
+    ts: datetime
     cmnd: str
 
 
@@ -84,5 +99,6 @@ class UpdateJobOut(BaseModel):
     created_at: datetime
     channel: str
     target_version: str | None
+    custom_url: str | None = None
     status: str
     devices: list[UpdateJobDeviceOut] = []

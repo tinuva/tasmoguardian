@@ -13,6 +13,7 @@ export interface Device {
   backup_schedule_enabled: boolean
   created_at: string
   updated_at: string
+  last_status_json: string | null
 }
 
 export type WsMessage =
@@ -20,6 +21,21 @@ export type WsMessage =
   | { type: 'backup_created'; ts: string; data: { device_id: number; backup_id: number; deduplicated: boolean } }
   | { type: 'update_progress'; ts: string; data: { job_id: number; device_id: number; state: string; error?: string } }
   | { type: 'scan_progress'; ts: string; data: { scan_id: string; done: number; total: number; found: number[] } }
+  | { type: 'telemetry'; ts: string; data: { device_id: number; kind: 'sensor' | 'state'; payload: Record<string, unknown> } }
+
+export interface CommandLogEntry {
+  id: number
+  device_id: number
+  ts: string
+  cmnd: string
+}
+
+export interface Telemetry {
+  sensor?: Record<string, unknown>
+  sensor_ts?: number
+  state?: Record<string, unknown>
+  state_ts?: number
+}
 
 export interface Backup {
   id: number
@@ -63,6 +79,7 @@ export interface UpdateJob {
   created_at: string
   channel: string
   target_version: string | null
+  custom_url: string | null
   status: string
   devices: UpdateJobDevice[]
 }
@@ -106,12 +123,17 @@ export const api = {
   listDevices: () => request<Device[]>('/devices'),
   addDevice: (ip: string, web_password?: string) =>
     request<Device>('/devices', { method: 'POST', body: JSON.stringify({ ip, web_password }) }),
+  patchDevice: (id: number, patch: { name?: string; web_password?: string; backup_schedule_enabled?: boolean }) =>
+    request<Device>(`/devices/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteDevice: (id: number) => request<void>(`/devices/${id}`, { method: 'DELETE' }),
-  command: (id: number, cmnd: string) =>
+  command: (id: number, cmnd: string, logHistory = false) =>
     request<Record<string, unknown>>(`/devices/${id}/command`, {
       method: 'POST',
-      body: JSON.stringify({ cmnd }),
+      body: JSON.stringify({ cmnd, log_history: logHistory }),
     }),
+  commandHistory: (id: number) => request<CommandLogEntry[]>(`/devices/${id}/command-history`),
+  telemetry: (id: number, refresh = false) =>
+    request<Telemetry>(`/devices/${id}/telemetry${refresh ? '?refresh=true' : ''}`),
   listDeviceBackups: (deviceId: number) => request<Backup[]>(`/devices/${deviceId}/backups`),
   triggerBackup: (deviceId: number) =>
     request<{ backup: Backup; deduplicated: boolean }>(`/devices/${deviceId}/backups`, {
@@ -125,8 +147,11 @@ export const api = {
     }),
   deleteBackup: (backupId: number) => request<void>(`/backups/${backupId}`, { method: 'DELETE' }),
   latestRelease: () => request<{ latest: string }>('/firmware/releases'),
-  createUpdate: (device_ids: number[]) =>
-    request<UpdateJob>('/updates', { method: 'POST', body: JSON.stringify({ device_ids }) }),
+  createUpdate: (device_ids: number[], channel: 'release' | 'custom_url' = 'release', custom_url?: string) =>
+    request<UpdateJob>('/updates', {
+      method: 'POST',
+      body: JSON.stringify({ device_ids, channel, custom_url }),
+    }),
   listUpdates: () => request<UpdateJob[]>('/updates'),
   getUpdate: (jobId: number) => request<UpdateJob>(`/updates/${jobId}`),
   cancelUpdate: (jobId: number) =>

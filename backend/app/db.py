@@ -39,6 +39,12 @@ async def init_db() -> None:
         ]
         if "partition_layout" not in cols:
             await conn.exec_driver_sql("ALTER TABLE device ADD COLUMN partition_layout TEXT")
+        job_cols = [
+            row[1]
+            for row in (await conn.exec_driver_sql("PRAGMA table_info(update_job)")).fetchall()
+        ]
+        if "custom_url" not in job_cols:
+            await conn.exec_driver_sql("ALTER TABLE update_job ADD COLUMN custom_url TEXT")
 
 
 async def get_session():

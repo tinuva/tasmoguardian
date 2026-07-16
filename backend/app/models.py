@@ -72,6 +72,9 @@ class UpdateJob(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     channel: Mapped[str] = mapped_column(Text, nullable=False)  # release|custom_url
     target_version: Mapped[str | None] = mapped_column(Text)
+    # user-supplied firmware URL for the custom_url channel (mirrored
+    # server-side; devices always fetch from our plain-HTTP /ota)
+    custom_url: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="running")
 
     devices: Mapped[list["UpdateJobDevice"]] = relationship(back_populates="job", cascade="all, delete-orphan")
@@ -111,3 +114,14 @@ class Setting(Base):
 
     key: Mapped[str] = mapped_column(Text, primary_key=True)
     value: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class CommandLog(Base):
+    """Per-device console command history (M5), persisted server-side
+    so history survives browser/session changes (TDM keeps 25/device)."""
+    __tablename__ = "command_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    device_id: Mapped[int] = mapped_column(ForeignKey("device.id"), nullable=False)
+    ts: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    cmnd: Mapped[str] = mapped_column(Text, nullable=False)
