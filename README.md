@@ -1,4 +1,4 @@
-# TasmoManager
+# TasmoGuardian
 
 Self-hosted web app to manage, back up, and update firmware on Tasmota
 devices. Replaces TasmoAdmin (device management / OTA) and TasmoBackupV1
@@ -40,9 +40,9 @@ and why this project treats the OTA URL as a first-class setting:
    the OTA URL breaks between the two steps, the device is stranded on
    minimal firmware with most features (including MQTT) gone.
 
-How TasmoManager addresses this:
+How TasmoGuardian addresses this:
 
-- `TM_OTA_BASE_URL` must be a **plain-HTTP** URL reachable from the
+- `TG_OTA_BASE_URL` must be a **plain-HTTP** URL reachable from the
   device LAN, e.g. `http://10.0.21.13:8000/ota` (host LAN IP + published
   port), bypassing any TLS proxy. The UI/API can still live behind
   HTTPS — only `/ota/*` needs the direct path.
@@ -85,7 +85,7 @@ Backend (Python 3.12+, FastAPI):
 cd backend
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
-TM_DATA_DIR=./data .venv/bin/uvicorn app.main:app --port 8123 --reload
+TG_DATA_DIR=./data .venv/bin/uvicorn app.main:app --port 8123 --reload
 ```
 
 Frontend (Vite + React + TS; proxies `/api` and `/ws` to `:8123`):
@@ -102,9 +102,9 @@ Single container, single volume:
 
 ```yaml
 services:
-  tasmomanager:
+  tasmoguardian:
     build: .
-    # or: image: tasmomanager:latest
+    # or: image: tasmoguardian:latest
     restart: unless-stopped
     volumes:
       - ./data:/data
@@ -114,10 +114,10 @@ services:
       - TZ=Africa/Johannesburg
       # Devices fetch firmware from this URL; must be plain HTTP and
       # reachable from the device LAN (do NOT put behind HTTPS proxy):
-      - TM_OTA_BASE_URL=http://10.0.22.5:8000/ota
+      - TG_OTA_BASE_URL=http://10.0.22.5:8000/ota
 ```
 
-> Note: the UI/API can sit behind a TLS reverse proxy, but `TM_OTA_BASE_URL`
+> Note: the UI/API can sit behind a TLS reverse proxy, but `TG_OTA_BASE_URL`
 > must remain plain-HTTP reachable from the devices — see
 > "The Tasmota OTA URL problem" above.
 
@@ -141,13 +141,13 @@ services:
 
 | Variable | Default | Description |
 |---|---|---|
-| `TM_DATA_DIR` | `/data` (image) | SQLite DB, backups, mirrored firmware |
-| `TM_PORT` | `8000` | Listen port |
-| `TM_POLL_INTERVAL_S` | `60` | Device status poll interval |
-| `TM_OTA_BASE_URL` | (derived) | Advertised firmware base URL for devices — plain HTTP only |
-| `TM_MQTT_BROKER_URL` | (off) | Optional MQTT broker for instant online/offline |
-| `TM_BACKUP_CRON_HOUR` / `TM_BACKUP_CRON_MINUTE` | `3` / `15` | Daily scheduled backup time |
-| `TM_RETENTION_KEEP_LAST` | `10` | Keep newest N backups per device |
-| `TM_RETENTION_KEEP_MONTHLY` | `12` | Keep one backup per month, N months |
-| `TM_RETENTION_PRE_UPDATE_DAYS` | `30` | pre_update backups exempt from pruning |
-| `TM_RETENTION_EVENTS_DAYS` | `90` | State-event history retention |
+| `TG_DATA_DIR` | `/data` (image) | SQLite DB, backups, mirrored firmware |
+| `TG_PORT` | `8000` | Listen port |
+| `TG_POLL_INTERVAL_S` | `60` | Device status poll interval |
+| `TG_OTA_BASE_URL` | (derived) | Advertised firmware base URL for devices — plain HTTP only |
+| `TG_MQTT_BROKER_URL` | (off) | Optional MQTT broker for instant online/offline |
+| `TG_BACKUP_CRON_HOUR` / `TG_BACKUP_CRON_MINUTE` | `3` / `15` | Daily scheduled backup time |
+| `TG_RETENTION_KEEP_LAST` | `10` | Keep newest N backups per device |
+| `TG_RETENTION_KEEP_MONTHLY` | `12` | Keep one backup per month, N months |
+| `TG_RETENTION_PRE_UPDATE_DAYS` | `30` | pre_update backups exempt from pruning |
+| `TG_RETENTION_EVENTS_DAYS` | `90` | State-event history retention |

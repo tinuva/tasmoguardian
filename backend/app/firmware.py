@@ -138,7 +138,7 @@ def ota_url_for(path: str) -> str:
     base = settings.ota_base_url.rstrip("/")
     if not base:
         raise FirmwareError(
-            "TM_OTA_BASE_URL is not set. It must be a plain-HTTP URL reachable "
+            "TG_OTA_BASE_URL is not set. It must be a plain-HTTP URL reachable "
             "from the device LAN (see README: The Tasmota OTA URL problem)."
         )
     return f"{base}/{path}"

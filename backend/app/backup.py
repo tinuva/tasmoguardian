@@ -148,7 +148,7 @@ async def restore_backup(device: Device, dmp_bytes: bytes) -> None:
             resp = await client.post(
                 f"{base}/u2",
                 params=auth_params,
-                files={"u2": ("tasmomanager-restore.dmp", dmp_bytes)},
+                files={"u2": ("tasmoguardian-restore.dmp", dmp_bytes)},
             )
     except httpx.HTTPError as exc:
         raise RestoreError(f"upload failed: {exc}") from exc

@@ -68,7 +68,7 @@ async def lifespan(_app: FastAPI):
     decoder_shutdown()
 
 
-app = FastAPI(title="TasmoManager", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="TasmoGuardian", version="0.1.0", lifespan=lifespan)
 
 app.include_router(devices.router, prefix="/api/v1")
 app.include_router(backups.router, prefix="/api/v1")

@@ -10,7 +10,7 @@ Topic conventions (Tasmota defaults):
 Some installs use <topic>/tele/... (FullTopic variants); we subscribe to
 both patterns.
 
-Enabled only when TM_MQTT_BROKER_URL is set, e.g.:
+Enabled only when TG_MQTT_BROKER_URL is set, e.g.:
     mqtt://user:pass@emqx.heaven.za.net:1883
 """
 import asyncio
@@ -117,7 +117,7 @@ async def _listen_forever() -> None:
     reconnect_delay = 5
     while True:
         try:
-            async with aiomqtt.Client(**broker, identifier="tasmomanager") as client:
+            async with aiomqtt.Client(**broker, identifier="tasmoguardian") as client:
                 log.info("mqtt connected to %s:%s", broker["hostname"], broker["port"])
                 reconnect_delay = 5
                 await client.subscribe("tele/+/LWT")
@@ -146,7 +146,7 @@ async def _listen_forever() -> None:
 def start() -> None:
     global _task
     if not settings.mqtt_broker_url:
-        log.info("mqtt listener disabled (TM_MQTT_BROKER_URL not set)")
+        log.info("mqtt listener disabled (TG_MQTT_BROKER_URL not set)")
         return
     _task = asyncio.get_running_loop().create_task(_listen_forever())
 

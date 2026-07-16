@@ -1,11 +1,11 @@
-"""Application settings, environment-driven (TM_ prefix)."""
+"""Application settings, environment-driven (TG_ prefix)."""
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="TM_")
+    model_config = SettingsConfigDict(env_prefix="TG_")
 
     data_dir: Path = Path("./data")
     port: int = 8000
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     @property
     def db_path(self) -> Path:
-        return self.data_dir / "tasmomanager.db"
+        return self.data_dir / "tasmoguardian.db"
 
     @property
     def backups_dir(self) -> Path:

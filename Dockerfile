@@ -16,13 +16,13 @@ RUN pip install --no-cache-dir ./backend
 
 COPY --from=spa /build/dist ./backend/static
 
-ENV TM_DATA_DIR=/data \
-    TM_PORT=8000
+ENV TG_DATA_DIR=/data \
+    TG_PORT=8000
 VOLUME /data
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-    CMD python -c "import urllib.request,os;urllib.request.urlopen(f'http://localhost:{os.environ.get(\"TM_PORT\",8000)}/healthz')"
+    CMD python -c "import urllib.request,os;urllib.request.urlopen(f'http://localhost:{os.environ.get(\"TG_PORT\",8000)}/healthz')"
 
 WORKDIR /srv/backend
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${TM_PORT}"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${TG_PORT}"]
