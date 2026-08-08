@@ -57,20 +57,20 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="border border-gray-200 rounded mb-2">
+    <div className="border border-gray-200 dark:border-gray-700 rounded mb-2">
       <button
-        className="w-full text-left px-3 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-t flex justify-between"
+        className="w-full text-left px-3 py-1.5 text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-t flex justify-between"
         onClick={() => setOpen(!open)}
       >
         {title}
-        <span className="text-gray-400">{open ? '▾' : '▸'}</span>
+        <span className="text-gray-400 dark:text-gray-500">{open ? '▾' : '▸'}</span>
       </button>
       {open && <div className="p-3">{children}</div>}
     </div>
   )
 }
 
-const inputCls = 'border border-gray-300 rounded px-2 py-0.5 text-xs'
+const inputCls = 'border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 text-xs'
 const btnCls = 'bg-blue-600 text-white rounded px-2 py-0.5 text-xs disabled:opacity-50'
 
 // ---------------------------------------------------------------- Timers
@@ -136,7 +136,7 @@ function TimersSection({ device }: { device: Device }) {
             '—'
           ) : (
             <button
-              className={`rounded px-2 py-0.5 border ${globalOn ? 'bg-green-100 border-green-300' : 'bg-gray-100 border-gray-300'}`}
+              className={`rounded px-2 py-0.5 border ${globalOn ? 'bg-green-100 dark:bg-green-950 border-green-300 dark:border-green-800' : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600'}`}
               onClick={() => send(`Timers ${globalOn ? 'OFF' : 'ON'}`)}
             >
               Timers {globalOn ? 'ON' : 'OFF'}
@@ -144,7 +144,7 @@ function TimersSection({ device }: { device: Device }) {
           )}
         </label>
         {sunrise && (
-          <span className="text-gray-500">
+          <span className="text-gray-500 dark:text-gray-400">
             sunrise {sunrise} · sunset {sunset}
           </span>
         )}
@@ -167,7 +167,7 @@ function TimersSection({ device }: { device: Device }) {
         </label>
       </div>
 
-      {!t && <p className="text-gray-400">Loading timer {n}… (older firmware may lack timers)</p>}
+      {!t && <p className="text-gray-400 dark:text-gray-500">Loading timer {n}… (older firmware may lack timers)</p>}
       {t && (
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 max-w-xl">
           <label className="flex items-center gap-2">
@@ -247,7 +247,7 @@ function TimersSection({ device }: { device: Device }) {
             <span className="mr-1">Days:</span>
             {DAY_LETTERS.map((d, i) => (
               <label key={d} className="flex flex-col items-center px-1">
-                <span className="text-gray-400">{d}</span>
+                <span className="text-gray-400 dark:text-gray-500">{d}</span>
                 <input type="checkbox" checked={dayOn(i)} onChange={(e) => setDay(i, e.target.checked)} />
               </label>
             ))}
@@ -256,10 +256,10 @@ function TimersSection({ device }: { device: Device }) {
             <button className={btnCls} disabled={!draft} onClick={save}>
               Save timer {n}
             </button>
-            <button className="text-gray-500 hover:underline" onClick={() => { setDraft(null); refetch() }}>
+            <button className="text-gray-500 dark:text-gray-400 hover:underline" onClick={() => { setDraft(null); refetch() }}>
               reload
             </button>
-            {msg && <span className="text-gray-500 truncate">{msg}</span>}
+            {msg && <span className="text-gray-500 dark:text-gray-400 truncate">{msg}</span>}
           </div>
         </div>
       )}
@@ -296,7 +296,7 @@ function SoToggle({
         onChange={(e) => onSend(`SetOption${so} ${e.target.checked ? 1 : 0}`)}
       />
       <span>
-        SO{so} — {label} {on === null && <em className="text-gray-400">(unknown)</em>}
+        SO{so} — {label} {on === null && <em className="text-gray-400 dark:text-gray-500">(unknown)</em>}
       </span>
     </label>
   )
@@ -314,7 +314,7 @@ function ButtonsSwitchesSection({ device }: { device: Device }) {
     true,
   )
   const { send, msg } = useSend(device.id, key)
-  if (!data) return <p className="text-xs text-gray-400">Loading…</p>
+  if (!data) return <p className="text-xs text-gray-400 dark:text-gray-500">Loading…</p>
 
   const switchModes = Object.entries(data)
     .filter(([k]) => /^SwitchMode\d*$/.test(k))
@@ -372,7 +372,7 @@ function ButtonsSwitchesSection({ device }: { device: Device }) {
           </div>
         </div>
       )}
-      {msg && <p className="text-gray-500">{msg}</p>}
+      {msg && <p className="text-gray-500 dark:text-gray-400">{msg}</p>}
     </div>
   )
 }
@@ -421,7 +421,7 @@ function PowerSection({ device }: { device: Device }) {
   )
   const { send, msg } = useSend(device.id, key)
   const [interlockGroups, setInterlockGroups] = useState<string | null>(null)
-  if (!data) return <p className="text-xs text-gray-400">Loading…</p>
+  if (!data) return <p className="text-xs text-gray-400 dark:text-gray-500">Loading…</p>
 
   const pulseTimes = Object.entries(data)
     .filter(([k]) => /^PulseTime\d*$/.test(k))
@@ -502,7 +502,7 @@ function PowerSection({ device }: { device: Device }) {
           ))}
         </div>
       )}
-      {msg && <p className="text-gray-500">{msg}</p>}
+      {msg && <p className="text-gray-500 dark:text-gray-400">{msg}</p>}
     </div>
   )
 }
@@ -530,7 +530,7 @@ function ModuleGpioSection({ device }: { device: Device }) {
   const [gpioDraft, setGpioDraft] = useState<Record<string, number>>({})
   const [templateDraft, setTemplateDraft] = useState<string | null>(null)
 
-  if (!data) return <p className="text-xs text-gray-400">Loading… (module list is large; first load takes a few seconds)</p>
+  if (!data) return <p className="text-xs text-gray-400 dark:text-gray-500">Loading… (module list is large; first load takes a few seconds)</p>
 
   const currentModule = data.Module ? Object.entries(data.Module as Obj)[0] : null
   const modules = flattenGroups(data, 'Modules')
@@ -556,7 +556,7 @@ function ModuleGpioSection({ device }: { device: Device }) {
       <div className="flex items-center gap-2">
         <span className="font-medium">Module:</span>
         {currentModule && (
-          <span className="text-gray-600">
+          <span className="text-gray-600 dark:text-gray-300">
             {currentModule[0]} — {String(currentModule[1])}
           </span>
         )}
@@ -601,7 +601,7 @@ function ModuleGpioSection({ device }: { device: Device }) {
                     ))}
                   </select>
                 ) : (
-                  <span className="text-gray-600">
+                  <span className="text-gray-600 dark:text-gray-300">
                     {name} ({val})
                   </span>
                 )}
@@ -619,7 +619,7 @@ function ModuleGpioSection({ device }: { device: Device }) {
       <div>
         <p className="font-medium mb-1">Template</p>
         <textarea
-          className="w-full border border-gray-300 rounded p-2 font-mono text-[11px] h-20"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded p-2 font-mono text-[11px] h-20"
           value={templateDraft ?? (template ? JSON.stringify(template) : '')}
           onChange={(e) => setTemplateDraft(e.target.value)}
           placeholder='{"NAME":"...","GPIO":[...],"FLAG":0,"BASE":18}'
@@ -643,7 +643,7 @@ function ModuleGpioSection({ device }: { device: Device }) {
             Apply template
           </button>
           <button
-            className="border border-gray-300 rounded px-2 py-0.5 text-xs hover:bg-gray-50"
+            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-800"
             onClick={() => {
               if (confirm(`Activate template (Module 0)?\n\nThe device will RESTART.`)) send('Module 0')
             }}
@@ -652,7 +652,7 @@ function ModuleGpioSection({ device }: { device: Device }) {
           </button>
         </div>
       </div>
-      {msg && <p className="text-gray-500">{msg}</p>}
+      {msg && <p className="text-gray-500 dark:text-gray-400">{msg}</p>}
     </div>
   )
 }
@@ -665,7 +665,7 @@ function OtaTeleSection({ device }: { device: Device }) {
   const { send, msg } = useSend(device.id, key)
   const [ota, setOta] = useState<string | null>(null)
   const [tele, setTele] = useState<string | null>(null)
-  if (!data) return <p className="text-xs text-gray-400">Loading…</p>
+  if (!data) return <p className="text-xs text-gray-400 dark:text-gray-500">Loading…</p>
 
   return (
     <div className="space-y-2 text-xs max-w-xl">
@@ -680,7 +680,7 @@ function OtaTeleSection({ device }: { device: Device }) {
           set
         </button>
       </div>
-      <p className="text-gray-400">
+      <p className="text-gray-400 dark:text-gray-500">
         Note: TasmoGuardian's update engine sets OtaUrl itself during managed updates; this is the
         device's standalone fallback URL.
       </p>
@@ -694,12 +694,49 @@ function OtaTeleSection({ device }: { device: Device }) {
           value={tele ?? String(data.TelePeriod ?? '')}
           onChange={(e) => setTele(e.target.value)}
         />
-        <span className="text-gray-400">seconds (10–3600) between tele/SENSOR publishes</span>
+        <span className="text-gray-400 dark:text-gray-500">seconds (10–3600) between tele/SENSOR publishes</span>
         <button className={btnCls} disabled={tele === null} onClick={() => tele && send(`TelePeriod ${tele}`)}>
           set
         </button>
       </div>
-      {msg && <p className="text-gray-500">{msg}</p>}
+      {msg && <p className="text-gray-500 dark:text-gray-400">{msg}</p>}
+    </div>
+  )
+}
+
+// ------------------------------------------------- Device recovery (SO65)
+
+function DeviceRecoverySection({ device }: { device: Device }) {
+  const key = 'recovery'
+  const { data } = useDeviceValues(device.id, key, ['SetOption65'], true)
+  const { send, msg } = useSend(device.id, key)
+  if (!data) return <p className="text-xs text-gray-400 dark:text-gray-500">Loading…</p>
+
+  // SO65 semantics are inverted: 0 = fast power cycle detection ENABLED
+  // (default), 1 = disabled. The checkbox reflects the feature, not the bit.
+  const so65 = toggleValue(data.SetOption65)
+  const recoveryOn = so65 === null ? null : !so65
+
+  return (
+    <div className="space-y-2 text-xs max-w-xl">
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={recoveryOn ?? false}
+          disabled={recoveryOn === null}
+          onChange={(e) => send(`SetOption65 ${e.target.checked ? 0 : 1}`)}
+        />
+        <span>
+          Fast power cycle device recovery{' '}
+          {recoveryOn === null && <em className="text-gray-400 dark:text-gray-500">(unknown)</em>}
+        </span>
+      </label>
+      <p className="text-gray-400 dark:text-gray-500">
+        SO65 — when enabled (SetOption65 0, Tasmota default), power cycling the device ~7 times
+        resets its settings to firmware defaults. Disable (SetOption65 1) to prevent accidental
+        resets on flaky mains power.
+      </p>
+      {msg && <p className="text-gray-500 dark:text-gray-400">{msg}</p>}
     </div>
   )
 }
@@ -708,7 +745,7 @@ function OtaTeleSection({ device }: { device: Device }) {
 
 export function ConfigPanel({ device }: { device: Device }) {
   if (!device.online)
-    return <p className="text-xs text-gray-400">Device is offline — configuration requires a reachable device.</p>
+    return <p className="text-xs text-gray-400 dark:text-gray-500">Device is offline — configuration requires a reachable device.</p>
 
   // Sections render children only while open, so each section's device
   // queries fire lazily on first expand.
@@ -725,6 +762,9 @@ export function ConfigPanel({ device }: { device: Device }) {
       </Section>
       <Section title="Module / GPIO / Template">
         <ModuleGpioSection device={device} />
+      </Section>
+      <Section title="Device recovery (SO65)">
+        <DeviceRecoverySection device={device} />
       </Section>
       <Section title="OtaUrl & TelePeriod">
         <OtaTeleSection device={device} />

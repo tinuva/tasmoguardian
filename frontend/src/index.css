@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+/* Dark mode is driven by a `dark` class on <html> (set by src/theme.ts,
+   which follows the OS preference unless the user overrides it). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Native widgets (checkboxes, selects, scrollbars, color/range inputs)
+   follow the active theme. */
+:root {
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+}

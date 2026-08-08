@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TasmoGuardian</title>
+    <script>
+      // Apply theme before first paint to avoid a flash of the wrong mode.
+      // Kept in sync with src/theme.ts (key: tg-theme, values: light|dark|system).
+      try {
+        var t = localStorage.getItem('tg-theme')
+        if (t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches))
+          document.documentElement.classList.add('dark')
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

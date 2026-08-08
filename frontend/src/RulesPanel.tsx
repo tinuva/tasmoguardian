@@ -130,7 +130,7 @@ export function RulesPanel({ deviceId, online }: { deviceId: number; online: boo
     URL.revokeObjectURL(a.href)
   }
 
-  if (!online) return <p className="text-xs text-gray-400">Device is offline.</p>
+  if (!online) return <p className="text-xs text-gray-400 dark:text-gray-500">Device is offline.</p>
 
   return (
     <div className="space-y-3">
@@ -138,7 +138,7 @@ export function RulesPanel({ deviceId, online }: { deviceId: number; online: boo
         {[1, 2, 3].map((i) => (
           <button
             key={i}
-            className={`rounded px-2 py-0.5 border ${n === i ? 'bg-blue-600 text-white border-blue-700' : 'border-gray-300 hover:bg-gray-50'}`}
+            className={`rounded px-2 py-0.5 border ${n === i ? 'bg-blue-600 text-white border-blue-700' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
             onClick={() => {
               setN(i)
               setDraft(null)
@@ -176,15 +176,15 @@ export function RulesPanel({ deviceId, online }: { deviceId: number; online: boo
             </label>
           </>
         )}
-        <span className={`ml-auto font-mono ${rule && folded.length > rule.limit ? 'text-red-600 font-bold' : 'text-gray-400'}`}>
+        <span className={`ml-auto font-mono ${rule && folded.length > rule.limit ? 'text-red-600 dark:text-red-400 font-bold' : 'text-gray-400 dark:text-gray-500'}`}>
           {folded.length}/{rule?.limit ?? RULE_LIMIT_FALLBACK}
         </span>
       </div>
 
-      {isLoading && <p className="text-xs text-gray-400">Loading rule…</p>}
+      {isLoading && <p className="text-xs text-gray-400 dark:text-gray-500">Loading rule…</p>}
 
       <textarea
-        className="w-full border border-gray-300 rounded p-2 font-mono text-[11px] h-40"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded p-2 font-mono text-[11px] h-40"
         spellCheck={false}
         value={text}
         placeholder={'on Power1#state=1 do\n  RuleTimer1 60\nendon'}
@@ -192,7 +192,7 @@ export function RulesPanel({ deviceId, online }: { deviceId: number; online: boo
       />
 
       {text && (
-        <pre className="bg-gray-900 text-gray-100 rounded p-2 text-[11px] whitespace-pre-wrap font-mono">
+        <pre className="bg-gray-900 text-gray-100 rounded p-2 text-[11px] whitespace-pre-wrap font-mono dark:border dark:border-gray-700">
           {highlightRule(text)}
         </pre>
       )}
@@ -205,18 +205,18 @@ export function RulesPanel({ deviceId, online }: { deviceId: number; online: boo
         >
           Upload Rule{n}
         </button>
-        <button className="border border-gray-300 rounded px-2 py-1 hover:bg-gray-50" onClick={loadFromFile}>
+        <button className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={loadFromFile}>
           load file
         </button>
-        <button className="border border-gray-300 rounded px-2 py-1 hover:bg-gray-50" onClick={saveToFile}>
+        <button className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={saveToFile}>
           save file
         </button>
         {draft !== null && (
-          <button className="text-gray-500 hover:underline" onClick={() => setDraft(null)}>
+          <button className="text-gray-500 dark:text-gray-400 hover:underline" onClick={() => setDraft(null)}>
             discard changes
           </button>
         )}
-        {notice && <span className="text-gray-500">{notice}</span>}
+        {notice && <span className="text-gray-500 dark:text-gray-400">{notice}</span>}
       </div>
 
       <VarMemMonitor deviceId={deviceId} />
@@ -262,12 +262,12 @@ function VarMemMonitor({ deviceId }: { deviceId: number }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-1">
-        <h4 className="text-xs font-semibold text-gray-500">Vars / Mems / RuleTimers</h4>
-        <label className="text-xs text-gray-500 flex items-center gap-1">
+        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">Vars / Mems / RuleTimers</h4>
+        <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
           <input type="checkbox" checked={poll} onChange={(e) => setPoll(e.target.checked)} />
           poll 2s
         </label>
-        <span className="text-[10px] text-gray-400">click a value to set it</span>
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">click a value to set it</span>
       </div>
       <div className="grid grid-cols-3 gap-4 text-xs font-mono">
         <ValueList title="Var" items={vars} onSet={(i, v) => setValue('Var', i, v)} />
@@ -302,15 +302,15 @@ function ValueList({
   if (items.length === 0) return <div />
   return (
     <div>
-      <p className="text-gray-400 mb-0.5">{title}</p>
+      <p className="text-gray-400 dark:text-gray-500 mb-0.5">{title}</p>
       {items.map((it) => (
         <button
           key={it.idx}
-          className="block w-full text-left hover:bg-gray-100 rounded px-1"
+          className="block w-full text-left hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1"
           onClick={() => onSet(it.idx, it.value)}
         >
           {title}
-          {it.idx} = <span className="text-blue-700">{it.value || '""'}</span>
+          {it.idx} = <span className="text-blue-700 dark:text-blue-300">{it.value || '""'}</span>
         </button>
       ))}
     </div>

@@ -43,12 +43,12 @@ export function ControlPanel({ device }: { device: Device }) {
 
   return (
     <div className="space-y-4">
-      {notice && <p className="text-xs text-gray-600">{notice}</p>}
+      {notice && <p className="text-xs text-gray-600 dark:text-gray-300">{notice}</p>}
 
       {/* Relays */}
       <div>
-        <h4 className="text-xs font-semibold text-gray-500 mb-1">Relays</h4>
-        {relays.length === 0 && <p className="text-xs text-gray-400">No relay state reported.</p>}
+        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Relays</h4>
+        {relays.length === 0 && <p className="text-xs text-gray-400 dark:text-gray-500">No relay state reported.</p>}
         <div className="flex flex-wrap gap-2 items-center">
           {relays.map((r) => {
             const on = pending[r.idx] ?? r.on
@@ -58,7 +58,7 @@ export function ControlPanel({ device }: { device: Device }) {
                 className={`rounded px-3 py-1 text-sm font-medium border ${
                   on
                     ? 'bg-green-600 border-green-700 text-white'
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
                 disabled={!device.online}
                 onClick={() => toggleRelay(r.idx, r.on)}
@@ -71,14 +71,14 @@ export function ControlPanel({ device }: { device: Device }) {
           {relays.length > 1 && (
             <>
               <button
-                className="border border-gray-300 rounded px-2 py-1 text-xs hover:bg-gray-50"
+                className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800"
                 disabled={!device.online}
                 onClick={() => cmd.mutate('Power0 ON')}
               >
                 All ON
               </button>
               <button
-                className="border border-gray-300 rounded px-2 py-1 text-xs hover:bg-gray-50"
+                className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800"
                 disabled={!device.online}
                 onClick={() => cmd.mutate('Power0 OFF')}
               >
@@ -92,7 +92,7 @@ export function ControlPanel({ device }: { device: Device }) {
       {/* Light (M8) */}
       {light && (
         <div>
-          <h4 className="text-xs font-semibold text-gray-500 mb-1">Light</h4>
+          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Light</h4>
           <div className="space-y-2 max-w-md">
             {light.dimmer !== null && (
               <Slider
@@ -116,7 +116,7 @@ export function ControlPanel({ device }: { device: Device }) {
             )}
             {light.hsb && (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 w-24">Color</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 w-24">Color</span>
                 <input
                   type="color"
                   defaultValue={hsbToHex(light.hsb)}
@@ -126,7 +126,7 @@ export function ControlPanel({ device }: { device: Device }) {
                     cmd.mutate(`HSBColor ${h},${s},${b}`)
                   }}
                 />
-                <span className="text-xs text-gray-400 font-mono">HSB {light.hsb.join(',')}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">HSB {light.hsb.join(',')}</span>
               </div>
             )}
             {light.channels &&
@@ -154,14 +154,14 @@ export function ControlPanel({ device }: { device: Device }) {
       {/* Shutters (M8) */}
       {shutters.length > 0 && (
         <div>
-          <h4 className="text-xs font-semibold text-gray-500 mb-1">Shutters</h4>
+          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Shutters</h4>
           <div className="space-y-2 max-w-md">
             {shutters.map((sh) => (
               <div key={sh.idx} className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 w-20">
+                <span className="text-xs text-gray-500 dark:text-gray-400 w-20">
                   Shutter {sh.idx}
                   {sh.direction !== 0 && (
-                    <span className="text-amber-600"> {sh.direction > 0 ? '[OPENING]' : '[CLOSING]'}</span>
+                    <span className="text-amber-600 dark:text-amber-400"> {sh.direction > 0 ? '[OPENING]' : '[CLOSING]'}</span>
                   )}
                 </span>
                 <Slider
@@ -172,13 +172,13 @@ export function ControlPanel({ device }: { device: Device }) {
                   disabled={!device.online}
                   onCommit={(v) => cmd.mutate(`ShutterPosition${sh.idx} ${v}`)}
                 />
-                <button className="border border-gray-300 rounded px-2 py-0.5 text-xs hover:bg-gray-50" disabled={!device.online} onClick={() => cmd.mutate(`ShutterOpen${sh.idx}`)}>
+                <button className="border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-800" disabled={!device.online} onClick={() => cmd.mutate(`ShutterOpen${sh.idx}`)}>
                   open
                 </button>
-                <button className="border border-gray-300 rounded px-2 py-0.5 text-xs hover:bg-gray-50" disabled={!device.online} onClick={() => cmd.mutate(`ShutterStop${sh.idx}`)}>
+                <button className="border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-800" disabled={!device.online} onClick={() => cmd.mutate(`ShutterStop${sh.idx}`)}>
                   stop
                 </button>
-                <button className="border border-gray-300 rounded px-2 py-0.5 text-xs hover:bg-gray-50" disabled={!device.online} onClick={() => cmd.mutate(`ShutterClose${sh.idx}`)}>
+                <button className="border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-800" disabled={!device.online} onClick={() => cmd.mutate(`ShutterClose${sh.idx}`)}>
                   close
                 </button>
               </div>
@@ -189,10 +189,10 @@ export function ControlPanel({ device }: { device: Device }) {
 
       {/* Maintenance */}
       <div>
-        <h4 className="text-xs font-semibold text-gray-500 mb-1">Maintenance</h4>
+        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Maintenance</h4>
         <div className="flex flex-wrap gap-2 items-center">
           <a
-            className="border border-gray-300 rounded px-2 py-1 text-xs hover:bg-gray-50 text-blue-700"
+            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 text-blue-700 dark:text-blue-300"
             href={`http://${device.ip}`}
             target="_blank"
             rel="noreferrer"
@@ -200,7 +200,7 @@ export function ControlPanel({ device }: { device: Device }) {
             Open WebUI ↗
           </a>
           <button
-            className="border border-gray-300 rounded px-2 py-1 text-xs hover:bg-gray-50"
+            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800"
             disabled={!device.online}
             onClick={() => {
               if (confirm(`Restart ${device.name ?? device.ip}?`)) cmd.mutate('Restart 1')
@@ -215,7 +215,7 @@ export function ControlPanel({ device }: { device: Device }) {
           />
           {device.topic && (
             <button
-              className="border border-gray-300 rounded px-2 py-1 text-xs hover:bg-gray-50"
+              className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800"
               title="Publish empty retained payloads for this device's LWT/POWER topics (stale-broker cleanup)"
               onClick={async () => {
                 if (
@@ -260,7 +260,7 @@ function Slider({
   useEffect(() => setLocal(value), [value])
   return (
     <div className="flex items-center gap-2 flex-1">
-      <span className="text-xs text-gray-500 w-32">{label}</span>
+      <span className="text-xs text-gray-500 dark:text-gray-400 w-32">{label}</span>
       <input
         type="range"
         className="flex-1"
@@ -289,29 +289,29 @@ function ResetButton({
   return (
     <span className="relative">
       <button
-        className="border border-red-300 text-red-700 rounded px-2 py-1 text-xs hover:bg-red-50"
+        className="border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 rounded px-2 py-1 text-xs hover:bg-red-50 dark:hover:bg-red-950"
         disabled={disabled}
         onClick={() => setOpen(!open)}
       >
         Reset…
       </button>
       {open && (
-        <div className="absolute z-10 mt-1 left-0 bg-white border border-gray-300 rounded shadow-lg p-2 w-96">
+        <div className="absolute z-10 mt-1 left-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg p-2 w-96">
           <p className="text-xs font-semibold mb-1">Reset {deviceName}</p>
           {RESET_MODES.map((r) => (
             <button
               key={r.mode}
-              className="block w-full text-left text-xs px-2 py-1.5 hover:bg-red-50 rounded"
+              className="block w-full text-left text-xs px-2 py-1.5 hover:bg-red-50 dark:hover:bg-red-950 rounded"
               onClick={() => {
                 setOpen(false)
                 if (confirm(`${r.label} on ${deviceName}?\n\n${r.desc}\n\nThis cannot be undone.`)) onReset(r.mode)
               }}
             >
               <span className="font-medium">{r.label}</span>
-              <span className="text-gray-500"> — {r.desc}</span>
+              <span className="text-gray-500 dark:text-gray-400"> — {r.desc}</span>
             </button>
           ))}
-          <button className="text-xs text-gray-400 hover:underline mt-1 px-2" onClick={() => setOpen(false)}>
+          <button className="text-xs text-gray-400 dark:text-gray-500 hover:underline mt-1 px-2" onClick={() => setOpen(false)}>
             cancel
           </button>
         </div>

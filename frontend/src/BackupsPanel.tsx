@@ -27,7 +27,7 @@ function DiffValue({ value, className }: { value: unknown; className: string }) 
         <>
           {text.slice(0, LONG_VALUE)}…{' '}
           <button
-            className="text-blue-600 hover:underline whitespace-nowrap"
+            className="text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
             onClick={() => setExpanded(true)}
           >
             +{text.length - LONG_VALUE} chars
@@ -40,7 +40,7 @@ function DiffValue({ value, className }: { value: unknown; className: string }) 
             <>
               {' '}
               <button
-                className="text-blue-600 hover:underline whitespace-nowrap"
+                className="text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
                 onClick={() => setExpanded(false)}
               >
                 collapse
@@ -60,24 +60,24 @@ function DiffView({ backupId, against, onClose }: { backupId: number; against: n
   })
 
   return (
-    <div className="mt-2 border border-gray-200 rounded p-3 bg-gray-50">
+    <div className="mt-2 border border-gray-200 dark:border-gray-700 rounded p-3 bg-gray-50 dark:bg-gray-900">
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-medium">
           Diff: #{against} → #{backupId}
         </span>
-        <button className="text-sm text-gray-500 hover:underline" onClick={onClose}>
+        <button className="text-sm text-gray-500 dark:text-gray-400 hover:underline" onClick={onClose}>
           close
         </button>
       </div>
-      {isLoading && <p className="text-sm text-gray-500">Computing…</p>}
-      {error && <p className="text-sm text-red-600">{(error as Error).message}</p>}
+      {isLoading && <p className="text-sm text-gray-500 dark:text-gray-400">Computing…</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{(error as Error).message}</p>}
       {data && data.entries.length === 0 && (
-        <p className="text-sm text-gray-500">No differences (volatile fields excluded).</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">No differences (volatile fields excluded).</p>
       )}
       {data && data.entries.length > 0 && (
         <table className="w-full text-xs font-mono table-fixed">
           <thead>
-            <tr className="text-left text-gray-500">
+            <tr className="text-left text-gray-500 dark:text-gray-400">
               <th className="pr-3 py-1 w-1/4">path</th>
               <th className="pr-3 py-1 w-[37.5%]">old</th>
               <th className="py-1 w-[37.5%]">new</th>
@@ -85,10 +85,10 @@ function DiffView({ backupId, against, onClose }: { backupId: number; against: n
           </thead>
           <tbody>
             {data.entries.map((e: DiffEntry) => (
-              <tr key={e.path} className="border-t border-gray-200 align-top">
+              <tr key={e.path} className="border-t border-gray-200 dark:border-gray-700 align-top">
                 <td className="pr-3 py-1 align-top break-all">{e.path}</td>
-                <DiffValue value={e.a} className="pr-3 text-red-700" />
-                <DiffValue value={e.b} className="text-green-700" />
+                <DiffValue value={e.a} className="pr-3 text-red-700 dark:text-red-400" />
+                <DiffValue value={e.b} className="text-green-700 dark:text-green-400" />
               </tr>
             ))}
           </tbody>
@@ -150,7 +150,7 @@ export function BackupsPanel({
   })
 
   return (
-    <div className="p-4 bg-gray-50 border-t border-gray-200">
+    <div className="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
       <div className="flex items-center gap-3 mb-2">
         <h3 className="text-sm font-semibold">Backups — {deviceName}</h3>
         <button
@@ -160,17 +160,17 @@ export function BackupsPanel({
         >
           {trigger.isPending ? 'Backing up…' : 'Backup now'}
         </button>
-        {notice && <span className="text-xs text-gray-600">{notice}</span>}
+        {notice && <span className="text-xs text-gray-600 dark:text-gray-300">{notice}</span>}
       </div>
 
-      {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-gray-500 dark:text-gray-400">Loading…</p>}
       {backups && backups.length === 0 && (
-        <p className="text-sm text-gray-400">No backups yet.</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500">No backups yet.</p>
       )}
       {backups && backups.length > 0 && (
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-left text-gray-500">
+            <tr className="text-left text-gray-500 dark:text-gray-400">
               <th className="pr-3 py-1">#</th>
               <th className="pr-3 py-1">Taken</th>
               <th className="pr-3 py-1">Trigger</th>
@@ -181,31 +181,31 @@ export function BackupsPanel({
           </thead>
           <tbody>
             {backups.map((b: Backup, i: number) => (
-              <tr key={b.id} className="border-t border-gray-200">
+              <tr key={b.id} className="border-t border-gray-200 dark:border-gray-700">
                 <td className="pr-3 py-1">{b.id}</td>
                 <td className="pr-3 py-1">{fmtDate(b.taken_at)}</td>
                 <td className="pr-3 py-1">
-                  <span className="bg-gray-200 rounded px-1.5 py-0.5">{b.trigger}</span>
+                  <span className="bg-gray-200 dark:bg-gray-700 rounded px-1.5 py-0.5">{b.trigger}</span>
                 </td>
                 <td className="pr-3 py-1">{b.fw_version ?? '—'}</td>
                 <td className="pr-3 py-1">{b.size_bytes ? `${b.size_bytes} B` : '—'}</td>
                 <td className="py-1 space-x-3 text-right whitespace-nowrap">
-                  <a className="text-blue-600 hover:underline" href={`/api/v1/backups/${b.id}/download?format=dmp`}>
+                  <a className="text-blue-600 dark:text-blue-400 hover:underline" href={`/api/v1/backups/${b.id}/download?format=dmp`}>
                     dmp
                   </a>
-                  <a className="text-blue-600 hover:underline" href={`/api/v1/backups/${b.id}/download?format=json`}>
+                  <a className="text-blue-600 dark:text-blue-400 hover:underline" href={`/api/v1/backups/${b.id}/download?format=json`}>
                     json
                   </a>
                   {i + 1 < backups.length && (
                     <button
-                      className="text-blue-600 hover:underline"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
                       onClick={() => setDiffPair({ b: b.id, a: backups[i + 1].id })}
                     >
                       diff prev
                     </button>
                   )}
                   <button
-                    className="text-amber-700 hover:underline"
+                    className="text-amber-700 dark:text-amber-400 hover:underline"
                     onClick={() => {
                       if (
                         confirm(
@@ -218,7 +218,7 @@ export function BackupsPanel({
                     restore
                   </button>
                   <button
-                    className="text-red-600 hover:underline"
+                    className="text-red-600 dark:text-red-400 hover:underline"
                     onClick={() => {
                       if (confirm(`Delete backup #${b.id}?`)) del.mutate(b.id)
                     }}
@@ -237,11 +237,11 @@ export function BackupsPanel({
       )}
 
       {needsConversion && (
-        <div className="mt-4 pt-3 border-t border-gray-200">
-          <h4 className="text-xs font-semibold text-gray-500 mb-1">Advanced operations</h4>
+        <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Advanced operations</h4>
           <div className="flex items-center gap-2">
             <button
-              className="border border-amber-400 text-amber-800 rounded px-2 py-0.5 text-xs hover:bg-amber-50 disabled:opacity-50"
+              className="border border-amber-400 dark:border-amber-700 text-amber-800 dark:text-amber-300 rounded px-2 py-0.5 text-xs hover:bg-amber-50 dark:hover:bg-amber-950 disabled:opacity-50"
               disabled={convert.isPending}
               onClick={() => {
                 if (
@@ -260,7 +260,7 @@ export function BackupsPanel({
             >
               {convert.isPending ? 'Starting…' : 'Convert to safeboot layout'}
             </button>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-400 dark:text-gray-500">
               old partition layout detected — required before firmware updates can succeed
             </span>
           </div>

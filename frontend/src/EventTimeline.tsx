@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import { api, type StateEvent } from './api'
 
 const KIND_STYLE: Record<string, string> = {
-  online: 'bg-green-100 text-green-800',
-  offline: 'bg-red-100 text-red-800',
-  version_change: 'bg-blue-100 text-blue-800',
-  config_change: 'bg-amber-100 text-amber-800',
+  online: 'bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-300',
+  offline: 'bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-300',
+  version_change: 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200',
+  config_change: 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300',
 }
 
 export function EventTimeline({ deviceId }: { deviceId: number }) {
@@ -15,21 +15,21 @@ export function EventTimeline({ deviceId }: { deviceId: number }) {
   })
 
   if (!events || events.length === 0) {
-    return <p className="text-xs text-gray-400 mt-3">No events recorded.</p>
+    return <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">No events recorded.</p>
   }
   return (
     <div className="mt-4">
-      <h4 className="text-xs font-semibold text-gray-500 mb-1">Event timeline</h4>
+      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Event timeline</h4>
       <ul className="space-y-0.5">
         {events.map((e: StateEvent) => (
           <li key={e.id} className="text-xs flex items-center gap-2">
-            <span className="text-gray-400 font-mono w-36 shrink-0">
+            <span className="text-gray-400 dark:text-gray-500 font-mono w-36 shrink-0">
               {new Date(e.ts + 'Z').toLocaleString()}
             </span>
-            <span className={`rounded px-1.5 py-0.5 font-medium ${KIND_STYLE[e.kind] ?? 'bg-gray-100'}`}>
+            <span className={`rounded px-1.5 py-0.5 font-medium ${KIND_STYLE[e.kind] ?? 'bg-gray-100 dark:bg-gray-800'}`}>
               {e.kind}
             </span>
-            <span className="text-gray-600">{e.detail}</span>
+            <span className="text-gray-600 dark:text-gray-300">{e.detail}</span>
           </li>
         ))}
       </ul>

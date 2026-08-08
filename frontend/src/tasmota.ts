@@ -72,11 +72,24 @@ export function shutterStates(
   return out
 }
 
+/** Decode a SetOption in the 50-81 range from Status 0's
+ *  StatusLOG.SetOption[2] (flag3, a 32-bit hex bitmask). Returns the raw
+ *  bit value (true = SetOption ON) or null when unavailable. */
+export function setOption50to81(status: StatusBlob | null, so: number): boolean | null {
+  const arr = status?.StatusLOG?.SetOption
+  if (!Array.isArray(arr) || typeof arr[2] !== 'string') return null
+  const bits = parseInt(arr[2], 16)
+  if (isNaN(bits)) return null
+  return ((bits >>> (so - 50)) & 1) === 1
+}
+
 /** Table view presets (M5), modeled on TDM's five views.
- *  Each column maps to a dotted path into the Status 0 blob. */
+ *  Each column maps to a dotted path into the Status 0 blob, or a
+ *  compute function for derived values (e.g. SetOption bitmask bits). */
 export interface ViewColumn {
   label: string
-  path: string
+  path?: string
+  compute?: (status: StatusBlob | null) => string
 }
 
 export const VIEWS: Record<string, ViewColumn[]> = {
@@ -94,6 +107,14 @@ export const VIEWS: Record<string, ViewColumn[]> = {
     { label: 'MqttCount', path: 'StatusSTS.MqttCount' },
     { label: 'RSSI', path: 'StatusSTS.Wifi.RSSI' },
     { label: 'Downtime', path: 'StatusSTS.Wifi.Downtime' },
+    {
+      // SO65: 0 = fast power cycle device recovery enabled (default), 1 = disabled
+      label: 'SO65 recovery',
+      compute: (status) => {
+        const disabled = setOption50to81(status, 65)
+        return disabled === null ? '—' : disabled ? 'Off (SO65 1)' : 'On (SO65 0)'
+      },
+    },
   ],
   Firmware: [
     { label: 'Version', path: 'StatusFWR.Version' },

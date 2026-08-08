@@ -47,13 +47,13 @@ function AddDeviceForm() {
       }}
     >
       <input
-        className="border border-gray-300 rounded px-2 py-1 text-sm w-40"
+        className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm w-40"
         placeholder="Device IP"
         value={ip}
         onChange={(e) => setIp(e.target.value)}
       />
       <input
-        className="border border-gray-300 rounded px-2 py-1 text-sm w-40"
+        className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm w-40"
         placeholder="Web password (opt.)"
         type="password"
         value={password}
@@ -65,7 +65,7 @@ function AddDeviceForm() {
       >
         {add.isPending ? 'Probing…' : 'Add device'}
       </button>
-      {add.isError && <span className="text-red-600 text-sm">{add.error.message}</span>}
+      {add.isError && <span className="text-red-600 dark:text-red-400 text-sm">{add.error.message}</span>}
     </form>
   )
 }
@@ -97,7 +97,7 @@ function ScanButton() {
   return (
     <span className="flex items-center gap-2">
       <button
-        className="border border-gray-300 rounded px-3 py-1 text-sm hover:bg-gray-50"
+        className="border border-gray-300 dark:border-gray-600 rounded px-3 py-1 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
         onClick={() => {
           const cidr = prompt('Subnet to scan (CIDR):', '10.0.22.0/24')
           if (cidr) scan.mutate(cidr)
@@ -105,7 +105,7 @@ function ScanButton() {
       >
         Scan subnet
       </button>
-      {progress && <span className="text-xs text-gray-500">{progress}</span>}
+      {progress && <span className="text-xs text-gray-500 dark:text-gray-400">{progress}</span>}
     </span>
   )
 }
@@ -121,7 +121,7 @@ function RelayDots({ device }: { device: Device }) {
         <button
           key={r.idx}
           className={`inline-block w-3.5 h-3.5 rounded-sm border text-[8px] leading-none ${
-            r.on ? 'bg-amber-400 border-amber-500' : 'bg-gray-100 border-gray-300'
+            r.on ? 'bg-amber-400 border-amber-500' : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600'
           }`}
           title={`Power${r.idx}: ${r.on ? 'ON' : 'OFF'} — click to toggle`}
           disabled={!device.online}
@@ -212,7 +212,7 @@ export default function App() {
         <div className="flex items-center gap-3">
           <ScanButton />
           <button
-            className="border border-gray-300 rounded px-3 py-1 text-sm hover:bg-gray-50"
+            className="border border-gray-300 dark:border-gray-600 rounded px-3 py-1 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
             onClick={() => setShowSettings(!showSettings)}
           >
             Settings
@@ -224,12 +224,12 @@ export default function App() {
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs text-gray-500">View:</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">View:</span>
         {VIEW_NAMES.map((v) => (
           <button
             key={v}
             className={`text-xs rounded px-2 py-0.5 border ${
-              view === v ? 'bg-blue-600 text-white border-blue-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+              view === v ? 'bg-blue-600 text-white border-blue-700' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
             onClick={() => setView(v)}
           >
@@ -237,7 +237,7 @@ export default function App() {
           </button>
         ))}
         <button
-          className="ml-auto text-xs text-gray-500 hover:underline"
+          className="ml-auto text-xs text-gray-500 dark:text-gray-400 hover:underline"
           onClick={() => devices && exportCsv(devices)}
         >
           export CSV
@@ -245,7 +245,7 @@ export default function App() {
       </div>
 
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 mb-3 p-2 bg-blue-50 border border-blue-200 rounded">
+        <div className="flex items-center gap-3 mb-3 p-2 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
           <span className="text-sm">{selected.size} device(s) selected</span>
           <button
             className="bg-blue-600 text-white rounded px-3 py-1 text-sm disabled:opacity-50"
@@ -262,7 +262,7 @@ export default function App() {
             {createUpdate.isPending ? 'Creating job…' : `Update to ${release?.latest ?? 'latest'}`}
           </button>
           <button
-            className="border border-blue-300 text-blue-800 rounded px-3 py-1 text-sm disabled:opacity-50"
+            className="border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 rounded px-3 py-1 text-sm disabled:opacity-50"
             disabled={createUpdate.isPending}
             onClick={() => {
               const url = prompt(
@@ -279,29 +279,29 @@ export default function App() {
           >
             Custom URL…
           </button>
-          <button className="text-sm text-gray-500 hover:underline" onClick={() => setSelected(new Set())}>
+          <button className="text-sm text-gray-500 dark:text-gray-400 hover:underline" onClick={() => setSelected(new Set())}>
             clear
           </button>
           {createUpdate.isError && (
-            <span className="text-red-600 text-sm">{createUpdate.error.message}</span>
+            <span className="text-red-600 dark:text-red-400 text-sm">{createUpdate.error.message}</span>
           )}
         </div>
       )}
 
-      {isLoading && <p className="text-gray-500">Loading…</p>}
-      {error && <p className="text-red-600">{(error as Error).message}</p>}
+      {isLoading && <p className="text-gray-500 dark:text-gray-400">Loading…</p>}
+      {error && <p className="text-red-600 dark:text-red-400">{(error as Error).message}</p>}
 
       {devices && (
         <table className="w-full text-sm border-collapse">
           <thead>
-            <tr className="text-left border-b border-gray-300 text-gray-500">
+            <tr className="text-left border-b border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400">
               <th className="py-2 pr-2"></th>
               <th className="py-2 pr-4"></th>
               <th className="py-2 pr-4">Name</th>
               <th className="py-2 pr-4">IP</th>
               {viewCols ? (
                 viewCols.map((c) => (
-                  <th key={c.path} className="py-2 pr-4">
+                  <th key={c.label} className="py-2 pr-4">
                     {c.label}
                   </th>
                 ))
@@ -323,7 +323,7 @@ export default function App() {
               return (
                 <Fragment key={d.id}>
                   <tr
-                    className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                    className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                     onClick={() => setExpanded(expanded === d.id ? null : d.id)}
                   >
                     <td className="py-2 pr-2" onClick={(e) => e.stopPropagation()}>
@@ -335,7 +335,7 @@ export default function App() {
                     </td>
                     <td className="py-2 pr-4">
                       <span
-                        className={`inline-block w-2.5 h-2.5 rounded-full ${d.online ? 'bg-green-500' : 'bg-gray-400'}`}
+                        className={`inline-block w-2.5 h-2.5 rounded-full ${d.online ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-600'}`}
                         title={d.online ? 'online' : 'offline'}
                       />
                     </td>
@@ -346,11 +346,11 @@ export default function App() {
                     <td className="py-2 pr-4 font-mono">{d.ip}</td>
                     {viewCols ? (
                       viewCols.map((c) => {
-                        let val = statusPath(status, c.path)
+                        let val = c.compute ? c.compute(status) : statusPath(status, c.path!)
                         if (c.label === 'BSSId' && bssidAliases[val.toUpperCase()])
                           val = `${bssidAliases[val.toUpperCase()]} (${val})`
                         return (
-                          <td key={c.path} className="py-2 pr-4 text-gray-600 max-w-48 truncate" title={val}>
+                          <td key={c.label} className="py-2 pr-4 text-gray-600 dark:text-gray-300 max-w-48 truncate" title={val}>
                             {val}
                           </td>
                         )
@@ -361,7 +361,7 @@ export default function App() {
                           {d.fw_version ?? '—'}{' '}
                           {outdated && (
                             <span
-                              className="bg-amber-100 text-amber-800 rounded px-1.5 py-0.5 text-xs font-medium"
+                              className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 rounded px-1.5 py-0.5 text-xs font-medium"
                               title={`${release?.latest} available`}
                             >
                               {release?.latest} available
@@ -369,12 +369,12 @@ export default function App() {
                           )}
                         </td>
                         <td className="py-2 pr-4">{d.hardware ?? '—'}</td>
-                        <td className="py-2 pr-4 text-gray-500">{timeAgo(d.last_seen_at)}</td>
+                        <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{timeAgo(d.last_seen_at)}</td>
                       </>
                     )}
                     <td className="py-2 text-right whitespace-nowrap">
                       <a
-                        className="text-blue-600 hover:underline mr-3"
+                        className="text-blue-600 dark:text-blue-400 hover:underline mr-3"
                         href={`http://${d.ip}`}
                         target="_blank"
                         rel="noreferrer"
@@ -384,7 +384,7 @@ export default function App() {
                         webui
                       </a>
                       <button
-                        className="text-red-600 hover:underline"
+                        className="text-red-600 dark:text-red-400 hover:underline"
                         onClick={(e) => {
                           e.stopPropagation()
                           if (confirm(`Remove ${d.name ?? d.ip}?`)) del.mutate(d.id)
@@ -406,7 +406,7 @@ export default function App() {
             })}
             {devices.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-gray-400">
+                <td colSpan={8} className="py-8 text-center text-gray-400 dark:text-gray-500">
                   No devices yet — add one by IP above.
                 </td>
               </tr>

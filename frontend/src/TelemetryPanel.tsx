@@ -81,27 +81,27 @@ export function TelemetryPanel({ deviceId, online }: { deviceId: number; online:
     <div>
       <div className="flex items-center gap-3 mb-2">
         <button
-          className="border border-gray-300 rounded px-2 py-0.5 text-xs hover:bg-gray-50 disabled:opacity-50"
+          className="border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
           disabled={!online}
           onClick={refresh}
         >
           Poll now (Status 8)
         </button>
-        <label className="text-xs text-gray-500 flex items-center gap-1">
+        <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
           <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
           auto-refresh 10s
         </label>
         {data?.sensor_ts && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-400 dark:text-gray-500">
             sensors updated {Math.round(Date.now() / 1000 - data.sensor_ts)}s ago
           </span>
         )}
-        {error && <span className="text-xs text-red-600">{error}</span>}
+        {error && <span className="text-xs text-red-600 dark:text-red-400">{error}</span>}
       </div>
 
-      {isLoading && <p className="text-xs text-gray-400">Loading…</p>}
+      {isLoading && <p className="text-xs text-gray-400 dark:text-gray-500">Loading…</p>}
       {!isLoading && sensorRows.length === 0 && stateRows.length === 0 && (
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-400 dark:text-gray-500">
           No telemetry yet. Devices on MQTT stream in automatically (tele/SENSOR); otherwise use “Poll now”.
         </p>
       )}
@@ -156,8 +156,8 @@ function Sparklines({ deviceId }: { deviceId: number }) {
 
   return (
     <div className="mt-4">
-      <h4 className="text-xs font-semibold text-gray-500 mb-1">
-        Trends <span className="font-normal text-gray-400">(last {points.length} samples, ~{span} min)</span>
+      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+        Trends <span className="font-normal text-gray-400 dark:text-gray-500">(last {points.length} samples, ~{span} min)</span>
       </h4>
       <div className="grid grid-cols-3 gap-3">
         {ranked.map((s) => (
@@ -191,17 +191,17 @@ function Spark({
     .join(' ')
   const last = arr[arr.length - 1].v
   return (
-    <div className="border border-gray-200 rounded p-2 bg-white">
+    <div className="border border-gray-200 dark:border-gray-700 rounded p-2 bg-white dark:bg-gray-800">
       <div className="flex justify-between items-baseline">
-        <span className="text-[10px] text-gray-500 truncate" title={path}>
+        <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate" title={path}>
           {path}
         </span>
         <span className="text-xs font-mono font-medium">{Number.isInteger(last) ? last : last.toFixed(2)}</span>
       </div>
-      <svg width={W} height={H} className="block">
-        <polyline points={pts} fill="none" stroke="#2563eb" strokeWidth="1.5" />
+      <svg width={W} height={H} className="block text-blue-600 dark:text-blue-400">
+        <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.5" />
       </svg>
-      <div className="flex justify-between text-[9px] text-gray-400 font-mono">
+      <div className="flex justify-between text-[9px] text-gray-400 dark:text-gray-500 font-mono">
         <span>{min.toFixed(1)}</span>
         <span>{max.toFixed(1)}</span>
       </div>
@@ -212,14 +212,14 @@ function Spark({
 function TreeTable({ title, rows }: { title: string; rows: { key: string; label: string; value: string; depth: number }[] }) {
   return (
     <div>
-      <h4 className="text-xs font-semibold text-gray-500 mb-1">{title}</h4>
+      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{title}</h4>
       <table className="w-full text-xs">
         <tbody>
           {rows.map((r) => (
             <Fragment key={r.key}>
-              <tr className="border-t border-gray-100">
+              <tr className="border-t border-gray-100 dark:border-gray-800">
                 <td className="py-0.5 pr-3" style={{ paddingLeft: `${r.depth * 14}px` }}>
-                  <span className={r.value === '' ? 'font-medium' : 'text-gray-600'}>{r.label}</span>
+                  <span className={r.value === '' ? 'font-medium' : 'text-gray-600 dark:text-gray-300'}>{r.label}</span>
                 </td>
                 <td className="py-0.5 font-mono text-right">{r.value}</td>
               </tr>

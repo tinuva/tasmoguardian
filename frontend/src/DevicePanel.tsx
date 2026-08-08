@@ -18,15 +18,15 @@ export function DevicePanel({ device }: { device: Device }) {
   const [editing, setEditing] = useState(false)
 
   return (
-    <div className="p-4 bg-gray-50 border-t border-gray-200">
-      <div className="flex items-center gap-1 mb-3 border-b border-gray-200">
+    <div className="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-1 mb-3 border-b border-gray-200 dark:border-gray-700">
         {TABS.map((t) => (
           <button
             key={t}
             className={`px-3 py-1.5 text-sm rounded-t ${
               tab === t
-                ? 'bg-white border border-gray-200 border-b-white font-medium -mb-px'
-                : 'text-gray-500 hover:text-gray-800'
+                ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-b-white dark:border-b-gray-800 font-medium -mb-px'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
             }`}
             onClick={() => setTab(t)}
           >
@@ -34,7 +34,7 @@ export function DevicePanel({ device }: { device: Device }) {
           </button>
         ))}
         <button
-          className="ml-auto text-xs text-gray-500 hover:underline px-2"
+          className="ml-auto text-xs text-gray-500 dark:text-gray-400 hover:underline px-2"
           onClick={() => setEditing(!editing)}
         >
           {editing ? 'close edit' : 'edit device'}
@@ -81,7 +81,7 @@ function EditDeviceForm({ device, onDone }: { device: Device; onDone: () => void
 
   return (
     <form
-      className="flex flex-wrap items-center gap-3 mb-3 p-2 bg-white border border-gray-200 rounded text-xs"
+      className="flex flex-wrap items-center gap-3 mb-3 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-xs"
       onSubmit={(e) => {
         e.preventDefault()
         save.mutate()
@@ -90,7 +90,7 @@ function EditDeviceForm({ device, onDone }: { device: Device; onDone: () => void
       <label>
         Name{' '}
         <input
-          className="border border-gray-300 rounded px-2 py-0.5"
+          className="border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -98,7 +98,7 @@ function EditDeviceForm({ device, onDone }: { device: Device; onDone: () => void
       <label>
         Web password{' '}
         <input
-          className="border border-gray-300 rounded px-2 py-0.5"
+          className="border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5"
           type="password"
           placeholder="(unchanged)"
           value={password}
@@ -112,7 +112,7 @@ function EditDeviceForm({ device, onDone }: { device: Device; onDone: () => void
       <button className="bg-blue-600 text-white rounded px-3 py-1 disabled:opacity-50" disabled={save.isPending}>
         Save
       </button>
-      {save.isError && <span className="text-red-600">{save.error.message}</span>}
+      {save.isError && <span className="text-red-600 dark:text-red-400">{save.error.message}</span>}
     </form>
   )
 }

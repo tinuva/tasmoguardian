@@ -69,23 +69,23 @@ export function Console({ deviceId }: { deviceId: number }) {
     <div>
       <div
         ref={outRef}
-        className="bg-gray-900 text-gray-100 rounded p-2 h-64 overflow-y-auto font-mono text-[11px] whitespace-pre-wrap"
+        className="bg-gray-900 text-gray-100 rounded p-2 h-64 overflow-y-auto font-mono text-[11px] whitespace-pre-wrap dark:border dark:border-gray-700"
       >
         {lines.length === 0 && (
-          <span className="text-gray-500">
+          <span className="text-gray-500 dark:text-gray-400">
             Console ready — commands are proxied server-side (web password never leaves the backend).
             Up/Down = history. Try: Status 0
           </span>
         )}
         {lines.map((l, i) => (
           <div key={i} className={l.kind === 'cmd' ? 'text-cyan-300' : l.kind === 'err' ? 'text-red-400' : 'text-green-300'}>
-            <span className="text-gray-500">[{l.ts}]</span> {l.kind === 'cmd' ? `> ${l.text}` : l.text}
+            <span className="text-gray-500 dark:text-gray-400">[{l.ts}]</span> {l.kind === 'cmd' ? `> ${l.text}` : l.text}
           </div>
         ))}
       </div>
       <div className="flex gap-2 mt-2">
         <input
-          className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm font-mono"
+          className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm font-mono"
           list={`cmds-${deviceId}`}
           placeholder="Tasmota command…"
           value={input}
@@ -106,14 +106,14 @@ export function Console({ deviceId }: { deviceId: number }) {
           Send
         </button>
         <button
-          className="border border-gray-300 rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-50"
+          className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
           onClick={() => setLines([])}
         >
           clear
         </button>
       </div>
       {history && history.length > 0 && (
-        <div className="mt-1 text-[11px] text-gray-400 truncate">
+        <div className="mt-1 text-[11px] text-gray-400 dark:text-gray-500 truncate">
           history: {history.slice(0, 8).map((h) => h.cmnd).join(' · ')}
         </div>
       )}

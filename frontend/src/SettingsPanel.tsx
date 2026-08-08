@@ -1,6 +1,38 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type AppSettings } from './api'
+import { setThemePref, useThemePref, type ThemePref } from './theme'
+
+const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+]
+
+function ThemePicker() {
+  const pref = useThemePref()
+  return (
+    <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+      <span className="text-xs text-gray-600 dark:text-gray-300">Theme</span>
+      {THEME_OPTIONS.map((o) => (
+        <button
+          key={o.value}
+          className={`text-xs rounded px-2 py-0.5 border ${
+            pref === o.value
+              ? 'bg-blue-600 text-white border-blue-700'
+              : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+          }`}
+          onClick={() => setThemePref(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
+      <span className="text-[10px] text-gray-400 dark:text-gray-500">
+        stored in this browser · System follows your OS
+      </span>
+    </div>
+  )
+}
 
 const FIELDS: { key: keyof AppSettings; label: string; type: 'number' | 'text' | 'checkbox' }[] = [
   { key: 'poll_interval_s', label: 'Status poll interval (s)', type: 'number' },
@@ -38,16 +70,17 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const values = { ...data.values, ...draft }
 
   return (
-    <div className="border border-gray-200 rounded p-4 mb-6 bg-gray-50">
+    <div className="border border-gray-200 dark:border-gray-700 rounded p-4 mb-6 bg-gray-50 dark:bg-gray-900">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold">Settings</h2>
-        <button className="text-sm text-gray-500 hover:underline" onClick={onClose}>
+        <button className="text-sm text-gray-500 dark:text-gray-400 hover:underline" onClick={onClose}>
           close
         </button>
       </div>
+      <ThemePicker />
       <div className="grid grid-cols-2 gap-x-6 gap-y-2">
         {FIELDS.map((f) => (
-          <label key={f.key} className="text-xs text-gray-600">
+          <label key={f.key} className="text-xs text-gray-600 dark:text-gray-300">
             {f.label}
             {f.type === 'checkbox' ? (
               <input
@@ -58,7 +91,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               />
             ) : (
               <input
-                className="mt-0.5 block w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white"
+                className="mt-0.5 block w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800"
                 type={f.type}
                 value={values[f.key] as string | number}
                 onChange={(e) =>
@@ -80,7 +113,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         >
           Save
         </button>
-        {notice && <span className="text-xs text-gray-600">{notice}</span>}
+        {notice && <span className="text-xs text-gray-600 dark:text-gray-300">{notice}</span>}
       </div>
     </div>
   )
