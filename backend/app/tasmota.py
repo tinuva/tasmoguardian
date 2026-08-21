@@ -52,7 +52,19 @@ async def command(
 async def status0(ip: str, web_password: str | None = None) -> dict[str, Any]:
     data = await command(ip, "Status 0", web_password)
     if "Status" not in data:
-        raise DeviceCommandError(f"{ip}: unexpected Status 0 payload")
+        # Degraded devices (e.g. low heap after an exception) can omit the
+        # leading "Status" section from the Status 0 blob while the other
+        # sections and a plain "Status" query still work. If the rest of
+        # the blob looks like Tasmota, fetch the missing section separately
+        # instead of rejecting the device outright.
+        if "StatusNET" not in data and "StatusFWR" not in data:
+            raise DeviceCommandError(f"{ip}: unexpected Status 0 payload")
+        try:
+            head = await command(ip, "Status", web_password)
+        except (DeviceUnreachable, DeviceCommandError):
+            head = {}
+        if isinstance(head.get("Status"), dict):
+            data["Status"] = head["Status"]
     return data
 
 
